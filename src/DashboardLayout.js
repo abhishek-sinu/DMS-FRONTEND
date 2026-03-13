@@ -8,6 +8,7 @@ function DashboardLayout({ children, user }) {
     { to: '/dashboard', label: 'Dashboard' },
     { to: '/donors', label: 'Donors' },
     { to: '/donations', label: 'Donations' },
+      { to: '/cultivators', label: 'Cultivators' },
     { to: '/reports', label: 'Reports' },
     { to: '/engagement', label: 'Engagement' },
     { to: '/import', label: 'Bulk Import' },

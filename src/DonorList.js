@@ -92,6 +92,10 @@ function DonorList() {
 								<th className="py-3 px-5 border-b font-semibold">Phone</th>
 								<th className="py-3 px-5 border-b font-semibold">DOB</th>
 								<th className="py-3 px-5 border-b font-semibold">Anniversary</th>
+								<th className="py-3 px-5 border-b font-semibold">PAN Card</th>
+								<th className="py-3 px-5 border-b font-semibold">Cultivator</th>
+								<th className="py-3 px-5 border-b font-semibold">Last Gift</th>
+                                
 								<th className="py-3 px-5 border-b font-semibold">Actions</th>
 							</tr>
 						</thead>
@@ -104,6 +108,10 @@ function DonorList() {
 										<td className="py-3 px-5 border-b text-gray-700">{donor.phone}</td>
 										<td className="py-3 px-5 border-b text-gray-700">{formatDateDisplay(donor.date_of_birth)}</td>
 										<td className="py-3 px-5 border-b text-gray-700">{formatDateDisplay(donor.anniversary_date)}</td>
+										<td className="py-3 px-5 border-b text-gray-700">{donor.pan_card || '-'}</td>
+										<td className="py-3 px-5 border-b text-gray-700">{donor.cultivator_name || '-'}</td>
+										<td className="py-3 px-5 border-b text-gray-700">{donor.last_gift_details || '-'}</td>
+                                        
 										<td className="py-3 px-5 border-b">
 											<div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
 												<button
