@@ -90,7 +90,13 @@ function DonorEdit({ donor, onSuccess, onCancel }) {
 				},
 				body: JSON.stringify(form)
 			});
-			if (!res.ok) throw new Error('Failed to update donor');
+			if (!res.ok) {
+				const data = await res.json().catch(() => null);
+				if (res.status === 409 && data && data.error) {
+					throw new Error(data.error);
+				}
+				throw new Error('Failed to update donor');
+			}
 			// Update wife
 			const wifeMember = donor.family_members?.find(m => m.relation === 'wife');
 			if (wife.name && wife.date_of_birth) {

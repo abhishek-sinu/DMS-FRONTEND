@@ -5,6 +5,7 @@ import Dashboard from './Dashboard';
 import DonationList from './DonationList';
 import DonorList from './DonorList';
 import CultivatorList from './CultivatorList';
+import ReportList from './ReportList';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
 				   <Route path="/donations" element={<DonationList />} />
 				   <Route path="/donors" element={<DonorList />} />
                    <Route path="/cultivators" element={<CultivatorList />} />
+                   <Route path="/reports" element={<ReportList />} />
 			</Routes>
 		</BrowserRouter>
 	);

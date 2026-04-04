@@ -1,16 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from './DashboardLayout';
 function Dashboard() {
+	const API_URL = process.env.REACT_APP_API_URL;
 	const [user, setUser] = useState(null);
-	// Example stats, replace with real API calls
-	const [stats, setStats] = useState({
-		donors: 120,
-		donations: 350,
-		totalAmount: 125000,
-		birthdays: 5,
-		anniversaries: 2,
-		milestones: 3,
-	});
+	const [stats, setStats] = useState(null);
+	const [loading, setLoading] = useState(true);
+	const [modalType, setModalType] = useState(null);
+	const [modalData, setModalData] = useState([]);
+	const [modalLoading, setModalLoading] = useState(false);
 
 	useEffect(() => {
 		const token = localStorage.getItem('token');
@@ -21,6 +18,15 @@ function Dashboard() {
 			} catch {
 				setUser(null);
 			}
+			// Fetch live dashboard stats
+			fetch(`${API_URL}/api/dashboard/stats`, {
+				headers: { Authorization: `Bearer ${token}` }
+			})
+				.then(res => res.json())
+				.then(data => { setStats(data); setLoading(false); })
+				.catch(() => setLoading(false));
+		} else {
+			setLoading(false);
 		}
 	}, []);
 
@@ -28,42 +34,262 @@ function Dashboard() {
 		return <div className="min-h-screen flex items-center justify-center text-xl">Not logged in</div>;
 	}
 
+	const openModal = (type) => {
+		setModalType(type);
+		setModalLoading(true);
+		const token = localStorage.getItem('token');
+		const endpoint = type === 'birthdays' ? 'upcoming-birthdays' : 'upcoming-anniversaries';
+		fetch(`${API_URL}/api/dashboard/${endpoint}`, {
+			headers: { Authorization: `Bearer ${token}` }
+		})
+			.then(res => res.json())
+			.then(data => { setModalData(Array.isArray(data) ? data : []); setModalLoading(false); })
+			.catch(() => { setModalData([]); setModalLoading(false); });
+	};
+
 	return (
 		<DashboardLayout user={user}>
-			<div className="mb-8">
-				<h1 className="text-3xl font-bold text-blue-700">Welcome, {user.username}!</h1>
-				<p className="text-lg text-gray-600">Manage donors, donations, and engagement activities from your dashboard.</p>
+			{/* Welcome Banner */}
+			<div className="mb-8 bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 rounded-2xl p-8 text-white relative overflow-hidden shadow-xl">
+				<div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-white/5"></div>
+				<div className="absolute -bottom-10 -left-10 w-40 h-40 rounded-full bg-white/5"></div>
+				<div className="relative z-10">
+					<div className="flex items-center gap-3 mb-2">
+						<div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white font-bold text-xl shadow-lg">
+							{(user.username || 'U')[0].toUpperCase()}
+						</div>
+						<div>
+							<h1 className="text-2xl font-bold">Welcome back, {user.username}!</h1>
+							<p className="text-blue-200 text-sm">Manage donors, donations and cultivators from your dashboard.</p>
+						</div>
+					</div>
+				</div>
+				{/* Marquee */}
+				<div className="mt-5 overflow-hidden rounded-xl bg-white/10 py-2.5 px-4 backdrop-blur-sm border border-white/10">
+					<div className="animate-marquee whitespace-nowrap text-amber-200 font-semibold text-sm tracking-wide">
+						🪷 Hare Kṛṣṇa Hare Kṛṣṇa Kṛṣṇa Kṛṣṇa Hare Hare &nbsp;|&nbsp; Hare Rāma Hare Rāma Rāma Rāma Hare Hare 🪷
+						&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+						🪷 Hare Kṛṣṇa Hare Kṛṣṇa Kṛṣṇa Kṛṣṇa Hare Hare &nbsp;|&nbsp; Hare Rāma Hare Rāma Rāma Rāma Hare Hare 🪷
+					</div>
+					<style>{`
+						@keyframes marquee {
+							0% { transform: translateX(0%); }
+							100% { transform: translateX(-50%); }
+						}
+						.animate-marquee {
+							display: inline-block;
+							animation: marquee 18s linear infinite;
+						}
+					`}</style>
+				</div>
 			</div>
-			{/* Summary Cards */}
-			<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-				<div className="bg-white rounded-xl shadow p-6 flex flex-col items-center">
-					<span className="text-2xl font-bold text-blue-700">{stats.donors}</span>
-					<span className="text-gray-600 mt-2">Total Donors</span>
+
+			{loading ? (
+				<div className="flex items-center justify-center py-20">
+					<div className="flex flex-col items-center gap-3">
+						<svg className="animate-spin w-10 h-10 text-blue-600" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+						<span className="text-gray-400 font-medium">Loading dashboard...</span>
+					</div>
 				</div>
-				<div className="bg-white rounded-xl shadow p-6 flex flex-col items-center">
-					<span className="text-2xl font-bold text-green-700">₹{stats.totalAmount.toLocaleString()}</span>
-					<span className="text-gray-600 mt-2">Total Donations</span>
+			) : !stats ? (
+				<div className="text-center text-red-500 py-8 bg-red-50 rounded-xl border border-red-200">Failed to load dashboard data.</div>
+			) : (
+				<>
+					{/* Summary Cards */}
+					<div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
+						<div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 p-6 flex items-center gap-4 border border-gray-100 group cursor-default">
+							<div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+								<svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+							</div>
+							<div>
+								<span className="text-3xl font-extrabold text-gray-800">{stats.totalDonors}</span>
+								<p className="text-sm text-gray-500 font-medium mt-0.5">Total Donors</p>
+							</div>
+						</div>
+						<div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 p-6 flex items-center gap-4 border border-gray-100 group cursor-default">
+							<div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+								<svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" strokeWidth="2" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 7h6M9 10h6M12 17l-3-4h4.5a2.5 2.5 0 000-5" /></svg>
+							</div>
+							<div>
+								<span className="text-3xl font-extrabold text-gray-800">₹{stats.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+								<p className="text-sm text-gray-500 font-medium mt-0.5">Total Donations</p>
+							</div>
+						</div>
+						<div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 p-6 flex items-center gap-4 border border-gray-100 group cursor-default">
+							<div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+								<svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+							</div>
+							<div>
+								<span className="text-3xl font-extrabold text-gray-800">{stats.totalRecords}</span>
+								<p className="text-sm text-gray-500 font-medium mt-0.5">Donation Records</p>
+							</div>
+						</div>
+						<div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 p-6 flex items-center gap-4 border border-gray-100 group cursor-default">
+							<div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+								<svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+							</div>
+							<div>
+								<span className="text-3xl font-extrabold text-gray-800">{stats.totalCultivators}</span>
+								<p className="text-sm text-gray-500 font-medium mt-0.5">Total Cultivators</p>
+							</div>
+						</div>
+					</div>
+
+					{/* Engagement Cards */}
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+						<div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl shadow-md p-6 flex items-center gap-5 cursor-pointer hover:shadow-xl hover:scale-[1.02] transition-all duration-300 border border-blue-100" onClick={() => openModal('birthdays')}>
+							<div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center shadow-lg">
+								<span className="text-3xl">🎂</span>
+							</div>
+							<div className="flex-1">
+								<span className="text-4xl font-extrabold text-blue-700">{stats.upcomingBirthdays}</span>
+								<p className="text-gray-600 font-medium mt-1">Upcoming Birthdays (30 days)</p>
+								<span className="text-xs text-blue-500 font-semibold mt-1 inline-flex items-center gap-1">
+									View details
+									<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+								</span>
+							</div>
+						</div>
+						<div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-2xl shadow-md p-6 flex items-center gap-5 cursor-pointer hover:shadow-xl hover:scale-[1.02] transition-all duration-300 border border-pink-100" onClick={() => openModal('anniversaries')}>
+							<div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center shadow-lg">
+								<span className="text-3xl">💍</span>
+							</div>
+							<div className="flex-1">
+								<span className="text-4xl font-extrabold text-pink-700">{stats.upcomingAnniversaries}</span>
+								<p className="text-gray-600 font-medium mt-1">Upcoming Anniversaries (30 days)</p>
+								<span className="text-xs text-pink-500 font-semibold mt-1 inline-flex items-center gap-1">
+									View details
+									<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+								</span>
+							</div>
+						</div>
+					</div>
+
+					{/* Top Donors & Recent Donations */}
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+						{/* Top Donors */}
+						<div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+							<div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2" style={{ background: 'linear-gradient(135deg, #eff6ff, #eef2ff)' }}>
+								<svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>
+								<h3 className="text-lg font-bold text-gray-800">Top 5 Donors</h3>
+							</div>
+							<div className="p-5">
+								{stats.topDonors && stats.topDonors.length > 0 ? (
+									<table className="w-full text-sm">
+										<thead>
+											<tr className="text-gray-500 text-xs uppercase tracking-wider">
+												<th className="px-3 py-2 text-left">#</th>
+												<th className="px-3 py-2 text-left">Name</th>
+												<th className="px-3 py-2 text-left">Phone</th>
+												<th className="px-3 py-2 text-right">Total</th>
+											</tr>
+										</thead>
+										<tbody>
+											{stats.topDonors.map((d, i) => (
+												<tr key={i} className="border-t border-gray-50 hover:bg-blue-50/50 transition">
+													<td className="px-3 py-3">
+														<span className={`w-6 h-6 inline-flex items-center justify-center rounded-full text-xs font-bold ${i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-gray-100 text-gray-600' : i === 2 ? 'bg-orange-100 text-orange-700' : 'bg-gray-50 text-gray-500'}`}>{i + 1}</span>
+													</td>
+													<td className="px-3 py-3 font-medium text-gray-800">{d.name}</td>
+													<td className="px-3 py-3 text-gray-500">{d.phone || '-'}</td>
+													<td className="px-3 py-3 text-right font-bold text-emerald-600">₹{parseFloat(d.total).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+												</tr>
+											))}
+										</tbody>
+									</table>
+								) : (
+									<div className="text-gray-400 text-center py-6">No data</div>
+								)}
+							</div>
+						</div>
+
+						{/* Recent Donations */}
+						<div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+							<div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2" style={{ background: 'linear-gradient(135deg, #f0fdf4, #ecfdf5)' }}>
+								<svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+								<h3 className="text-lg font-bold text-gray-800">Recent Donations</h3>
+							</div>
+							<div className="p-5">
+								{stats.recentDonations && stats.recentDonations.length > 0 ? (
+									<table className="w-full text-sm">
+										<thead>
+											<tr className="text-gray-500 text-xs uppercase tracking-wider">
+												<th className="px-3 py-2 text-left">Donor</th>
+												<th className="px-3 py-2 text-right">Amount</th>
+												<th className="px-3 py-2 text-left">Date</th>
+												<th className="px-3 py-2 text-left">Mode</th>
+											</tr>
+										</thead>
+										<tbody>
+											{stats.recentDonations.map((d, i) => (
+												<tr key={i} className="border-t border-gray-50 hover:bg-emerald-50/50 transition">
+													<td className="px-3 py-3 font-medium text-gray-800">{d.donor_name || '-'}</td>
+													<td className="px-3 py-3 text-right font-bold text-emerald-600">₹{parseFloat(d.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+													<td className="px-3 py-3 text-gray-500">{d.transaction_date ? new Date(d.transaction_date).toLocaleDateString('en-IN') : '-'}</td>
+													<td className="px-3 py-3">
+														<span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 capitalize">{d.mode_of_payment || '-'}</span>
+													</td>
+												</tr>
+											))}
+										</tbody>
+									</table>
+								) : (
+									<div className="text-gray-400 text-center py-6">No data</div>
+								)}
+							</div>
+						</div>
+					</div>
+				</>
+			)}
+
+			{/* Birthday / Anniversary Modal */}
+			{modalType && (
+				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+					<div className="bg-white rounded-2xl shadow-2xl p-0 w-full max-w-lg max-h-[80vh] overflow-hidden">
+						<div className="flex items-center justify-between px-6 py-4 border-b border-gray-100" style={{ background: modalType === 'birthdays' ? 'linear-gradient(135deg, #eff6ff, #eef2ff)' : 'linear-gradient(135deg, #fdf2f8, #fce7f3)' }}>
+							<h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+								<span className="text-2xl">{modalType === 'birthdays' ? '🎂' : '💍'}</span>
+								{modalType === 'birthdays' ? 'Upcoming Birthdays' : 'Upcoming Anniversaries'}
+							</h3>
+							<button onClick={() => setModalType(null)} className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition">&times;</button>
+						</div>
+						<div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(80vh - 70px)' }}>
+							{modalLoading ? (
+								<div className="flex items-center justify-center py-10">
+									<svg className="animate-spin w-8 h-8 text-blue-500" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+								</div>
+							) : modalData.length === 0 ? (
+								<div className="text-center text-gray-400 py-10">No upcoming {modalType} in the next 30 days.</div>
+							) : (
+								<table className="w-full text-sm">
+									<thead>
+										<tr className="text-gray-500 text-xs uppercase tracking-wider">
+											<th className="px-3 py-2 text-left">#</th>
+											<th className="px-3 py-2 text-left">Name</th>
+											<th className="px-3 py-2 text-left">Phone</th>
+											<th className="px-3 py-2 text-left">{modalType === 'birthdays' ? 'Birthday' : 'Anniversary'}</th>
+										</tr>
+									</thead>
+									<tbody>
+										{modalData.map((d, i) => (
+											<tr key={i} className="border-t border-gray-50 hover:bg-gray-50 transition">
+												<td className="px-3 py-3">{i + 1}</td>
+												<td className="px-3 py-3 font-medium text-gray-800">{d.name}</td>
+												<td className="px-3 py-3 text-gray-500">{d.phone || '-'}</td>
+												<td className="px-3 py-3">
+													{modalType === 'birthdays'
+														? (d.date_of_birth ? new Date(d.date_of_birth).toLocaleDateString('en-IN') : '-')
+														: (d.anniversary_date ? new Date(d.anniversary_date).toLocaleDateString('en-IN') : '-')}
+												</td>
+											</tr>
+										))}
+									</tbody>
+								</table>
+							)}
+						</div>
+					</div>
 				</div>
-				<div className="bg-white rounded-xl shadow p-6 flex flex-col items-center">
-					<span className="text-2xl font-bold text-purple-700">{stats.donations}</span>
-					<span className="text-gray-600 mt-2">Donation Records</span>
-				</div>
-			</div>
-			{/* Engagement & Alerts */}
-			<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-				<div className="bg-blue-100 rounded-xl shadow p-6 flex flex-col items-center">
-					<span className="text-xl font-bold text-blue-700">{stats.birthdays}</span>
-					<span className="text-gray-700 mt-2">Upcoming Birthdays</span>
-				</div>
-				<div className="bg-pink-100 rounded-xl shadow p-6 flex flex-col items-center">
-					<span className="text-xl font-bold text-pink-700">{stats.anniversaries}</span>
-					<span className="text-gray-700 mt-2">Upcoming Anniversaries</span>
-				</div>
-				<div className="bg-yellow-100 rounded-xl shadow p-6 flex flex-col items-center">
-					<span className="text-xl font-bold text-yellow-700">{stats.milestones}</span>
-					<span className="text-gray-700 mt-2">Donor Milestones</span>
-				</div>
-			</div>
+			)}
 		</DashboardLayout>
 	);
 }

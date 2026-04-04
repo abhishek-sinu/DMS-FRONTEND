@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import DonorForm from './DonorForm';
 import DonorEdit from './DonorEdit';
 import DashboardLayout from './DashboardLayout';
+import ImportDonors from './ImportDonors';
 import { Link } from 'react-router-dom';
 
 function isAuthenticated() {
@@ -13,11 +14,14 @@ function DonorList() {
 	const API_URL = process.env.REACT_APP_API_URL;
 	const [donors, setDonors] = useState([]);
 	const [loading, setLoading] = useState(true);
+	const [initialLoad, setInitialLoad] = useState(true);
 	const [error, setError] = useState('');
 	const [editDonor, setEditDonor] = useState(null);
 	const [showAdd, setShowAdd] = useState(false);
 	const [deleteDonorId, setDeleteDonorId] = useState(null);
 	const [deleteLoading, setDeleteLoading] = useState(false);
+	const [pageSize, setPageSize] = useState(10);
+	const [currentPage, setCurrentPage] = useState(1);
 
 	// Utility to format date as 'DD Month yyyy'
 	function formatDateDisplay(dateString) {
@@ -49,10 +53,12 @@ function DonorList() {
 			.then(data => {
 				setDonors(data);
 				setLoading(false);
+				setInitialLoad(false);
 			})
 			.catch(() => {
 				setError('Failed to load donors');
 				setLoading(false);
+				setInitialLoad(false);
 			});
 	};
 
@@ -70,17 +76,37 @@ function DonorList() {
 		fetchDonors();
 	};
 
-	if (loading) return <div className="text-center mt-8">Loading donors...</div>;
+	if (loading && initialLoad) return <div className="text-center mt-8">Loading donors...</div>;
 	if (error) return <div className="text-center mt-8 text-red-500">{error}</div>;
 
 	return (
 		<DashboardLayout user={null}>
-			<div className="max-w-6xl mx-auto mt-10 bg-white p-8 rounded-xl shadow-lg border border-gray-200" aria-labelledby="donor-list-title">
+			<div className="max-w-full mx-auto mt-10 bg-white p-8 rounded-xl shadow-lg border border-gray-200" aria-labelledby="donor-list-title">
 				<div className="flex items-center justify-between mb-6">
 					<h2 id="donor-list-title" className="text-3xl font-extrabold text-blue-700 tracking-tight">Donor List</h2>
 					<Link to="/dashboard" className="bg-blue-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition shadow">Back to Dashboard</Link>
 				</div>
-				<button className="mb-4 bg-green-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-green-700 transition" onClick={() => setShowAdd(true)} aria-label="Add Donor">Add Donor</button>
+				<div className="flex items-center gap-2 mb-4">
+					<button className="bg-green-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-green-700 transition" onClick={() => setShowAdd(true)} aria-label="Add Donor">Add Donor</button>
+					<div className="ml-auto flex items-center gap-2">
+						<label className="text-sm font-semibold text-gray-600">Show:</label>
+						<select
+							value={pageSize}
+							onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+							className="border rounded px-2 py-1 text-sm"
+						>
+							<option value={10}>10</option>
+							<option value={20}>20</option>
+							<option value={30}>30</option>
+							<option value={50}>50</option>
+							<option value={donors.length}>All</option>
+						</select>
+						<span className="text-sm text-gray-500">per page</span>
+					</div>
+				</div>
+				<div className="mb-4">
+					<ImportDonors onImport={fetchDonors} />
+				</div>
 				{showAdd && <DonorForm onSuccess={() => { setShowAdd(false); fetchDonors(); }} />}
 				{editDonor && <DonorEdit donor={editDonor} onSuccess={() => { setEditDonor(null); fetchDonors(); }} onCancel={() => setEditDonor(null)} />}
 				<div className="overflow-x-auto mt-6">
@@ -100,7 +126,7 @@ function DonorList() {
 							</tr>
 						</thead>
 						<tbody>
-							{donors.map((donor, idx) => (
+							{donors.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((donor, idx) => (
 								<React.Fragment key={donor.id}>
 									<tr className="hover:bg-blue-100 transition">
 										<td className="py-3 px-5 border-b font-medium text-gray-900">{donor.name}</td>
@@ -149,6 +175,23 @@ function DonorList() {
 						</tbody>
 					</table>
 				</div>
+				{/* Pagination Controls */}
+				{donors.length > pageSize && (
+					<div className="flex items-center justify-between mt-4">
+						<span className="text-sm text-gray-600">
+							Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, donors.length)} of {donors.length}
+						</span>
+						<div className="flex gap-1">
+							<button disabled={currentPage === 1} onClick={() => setCurrentPage(1)} className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition">First</button>
+							<button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition">Prev</button>
+							{Array.from({ length: Math.ceil(donors.length / pageSize) }, (_, i) => i + 1).map(page => (
+								<button key={page} onClick={() => setCurrentPage(page)} className={`px-3 py-1 rounded border text-sm font-semibold transition ${currentPage === page ? 'bg-blue-600 text-white' : 'hover:bg-blue-50'}`}>{page}</button>
+							))}
+							<button disabled={currentPage === Math.ceil(donors.length / pageSize)} onClick={() => setCurrentPage(p => p + 1)} className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition">Next</button>
+							<button disabled={currentPage === Math.ceil(donors.length / pageSize)} onClick={() => setCurrentPage(Math.ceil(donors.length / pageSize))} className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition">Last</button>
+						</div>
+					</div>
+				)}
 			</div>
 		{/* Delete confirmation modal */}
 		{deleteDonorId && (

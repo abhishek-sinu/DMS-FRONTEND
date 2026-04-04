@@ -67,7 +67,13 @@ function DonorForm({ onSuccess }) {
 				},
 				body: JSON.stringify(form)
 			});
-			if (!res.ok) throw new Error('Failed to add donor');
+			if (!res.ok) {
+				const data = await res.json().catch(() => null);
+				if (res.status === 409 && data && data.error) {
+					throw new Error(data.error);
+				}
+				throw new Error('Failed to add donor');
+			}
 			const donor = await res.json();
 			// Add wife
 			if (wife.name && wife.date_of_birth) {

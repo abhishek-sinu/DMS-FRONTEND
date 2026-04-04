@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
 
-export default function ImportDonations({ onImport }) {
+export default function ImportCultivators({ onImport }) {
   const fileInputRef = useRef();
   const [importResult, setImportResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -16,27 +16,10 @@ export default function ImportDonations({ onImport }) {
       const workbook = XLSX.read(data, { type: 'array' });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const rawRows = XLSX.utils.sheet_to_json(sheet);
-      // Map Excel column headers to DB column names
       const headerMap = {
-        'id': 'id',
-        'receipt_number': 'receipt_number',
-        'phone_number': 'phone_number',
-        'transaction_date': 'transaction_date',
-        'instrument_number': 'instrument_number',
-        'donor_name': 'donor_name',
-        'amount': 'amount',
-        'scheme_name': 'scheme_name',
-        'mode_of_payment': 'mode_of_payment',
-        // Common Excel-friendly header names
-        'Receipt Number': 'receipt_number',
-        'Phone Number': 'phone_number',
-        'Transaction Date': 'transaction_date',
-        'Instrument Number': 'instrument_number',
-        'Donor Name': 'donor_name',
-        'Amount': 'amount',
-        'Scheme Name': 'scheme_name',
-        'Mode Of Payment': 'mode_of_payment',
-        'Mode of Payment': 'mode_of_payment',
+        'name': 'name', 'Name': 'name',
+        'phone': 'phone', 'Phone': 'phone',
+        'Phone Number': 'phone', 'phone_number': 'phone',
       };
       const rows = rawRows.map(row => {
         const mapped = {};
@@ -46,15 +29,14 @@ export default function ImportDonations({ onImport }) {
         }
         return mapped;
       });
-      // Send to backend
       const token = localStorage.getItem('token');
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/donations/import`, {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/cultivators/import`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {})
         },
-        body: JSON.stringify({ donations: rows })
+        body: JSON.stringify({ cultivators: rows })
       });
       const result = await res.json();
       setImportResult(result);
@@ -63,39 +45,32 @@ export default function ImportDonations({ onImport }) {
       setImportResult({ message: 'Import failed', error: err.message });
     }
     setLoading(false);
+    e.target.value = '';
   };
 
   const downloadSample = () => {
     const sampleData = [
-      {
-        'Receipt Number': 'R001',
-        'Phone Number': '9876543210',
-        'Transaction Date': '2026-04-01',
-        'Instrument Number': 'INST1001',
-        'Donor Name': 'John Doe',
-        'Amount': 2000,
-        'Scheme Name': 'Scheme A1',
-        'Mode Of Payment': 'online',
-      },
+      { 'Name': 'Gouranga Prabhu', 'Phone': '9876543210' },
+      { 'Name': 'Hari Prabhu', 'Phone': '9876543211' },
     ];
     const ws = XLSX.utils.json_to_sheet(sampleData);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Donations');
-    XLSX.writeFile(wb, 'sample_donations.xlsx');
+    XLSX.utils.book_append_sheet(wb, ws, 'Cultivators');
+    XLSX.writeFile(wb, 'sample_cultivators.xlsx');
   };
 
   return (
     <div>
       <div className="flex items-center gap-2">
         <button
-          className="bg-purple-600 text-white py-2 px-4 rounded font-semibold hover:bg-purple-700 transition"
+          className="bg-purple-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-purple-700 transition"
           onClick={() => fileInputRef.current.click()}
           disabled={loading}
         >
-          {loading ? 'Importing...' : 'Import Donations (Excel)'}
+          {loading ? 'Importing...' : 'Import (Excel)'}
         </button>
         <button
-          className="bg-blue-500 text-white py-2 px-4 rounded font-semibold hover:bg-blue-600 transition text-sm"
+          className="bg-blue-500 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-600 transition text-sm"
           onClick={downloadSample}
         >
           Download Sample

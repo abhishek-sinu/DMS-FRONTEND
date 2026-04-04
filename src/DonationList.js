@@ -15,6 +15,8 @@ function DonationList() {
 	const [error, setError] = useState('');
 	const [showAdd, setShowAdd] = useState(false);
 	const [editId, setEditId] = useState(null);
+	const [pageSize, setPageSize] = useState(10);
+	const [currentPage, setCurrentPage] = useState(1);
 
 	const fetchDonations = () => {
 		setLoading(true);
@@ -98,8 +100,25 @@ function DonationList() {
 				<h2 id="donation-list-title" className="text-2xl font-bold mb-4">Donation List</h2>
 				{error && <div className="text-center mb-2 text-red-500">{error}</div>}
 				{deleteSuccess && <div className="text-center mb-2 text-green-600">{deleteSuccess}</div>}
-				<div className="flex gap-2 mb-4">
+				<div className="flex items-center gap-2 mb-4">
 					<button className="bg-green-600 text-white py-2 px-4 rounded font-semibold hover:bg-green-700 transition" onClick={() => setShowAdd(true)} aria-label="Add Donation">Add Donation</button>
+					<div className="ml-auto flex items-center gap-2">
+						<label className="text-sm font-semibold text-gray-600">Show:</label>
+						<select
+							value={pageSize}
+							onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+							className="border rounded px-2 py-1 text-sm"
+						>
+							<option value={10}>10</option>
+							<option value={20}>20</option>
+							<option value={30}>30</option>
+							<option value={50}>50</option>
+							<option value={donations.length}>All</option>
+						</select>
+						<span className="text-sm text-gray-500">per page</span>
+					</div>
+				</div>
+				<div className="mb-4">
 					<ImportDonations onImport={fetchDonations} />
 				</div>
 				{showAdd && <DonationForm onSuccess={() => { setShowAdd(false); fetchDonations(); }} onCancel={() => setShowAdd(false)} />}
@@ -119,12 +138,12 @@ function DonationList() {
 						</tr>
 					</thead>
 					<tbody>
-						{donations.map((donation, idx) => (
-							<tr key={donation.id} tabIndex={0} aria-label={`Donation row ${idx + 1}`}
+						{donations.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((donation, idx) => (
+							<tr key={donation.id} tabIndex={0} aria-label={`Donation row ${(currentPage - 1) * pageSize + idx + 1}`}
 								className="focus:outline-none focus:ring-2 focus:ring-blue-400">
 								<td className="py-2 px-4 border">{donation.receipt_number}</td>
 								<td className="py-2 px-4 border">{donation.phone_number}</td>
-								<td className="py-2 px-4 border">{donation.transaction_date}</td>
+								<td className="py-2 px-4 border">{donation.transaction_date ? new Date(donation.transaction_date).toLocaleDateString('en-IN') : '-'}</td>
 								<td className="py-2 px-4 border">{donation.instrument_number}</td>
 								<td className="py-2 px-4 border">{donation.donor_name}</td>
 								<td className="py-2 px-4 border">{donation.amount}</td>
@@ -148,6 +167,44 @@ function DonationList() {
 						))}
 					</tbody>
 				</table>
+
+				{/* Pagination Controls */}
+				{donations.length > pageSize && (
+					<div className="flex items-center justify-between mt-4">
+						<span className="text-sm text-gray-600">
+							Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, donations.length)} of {donations.length}
+						</span>
+						<div className="flex gap-1">
+							<button
+								disabled={currentPage === 1}
+								onClick={() => setCurrentPage(1)}
+								className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition"
+							>First</button>
+							<button
+								disabled={currentPage === 1}
+								onClick={() => setCurrentPage(p => p - 1)}
+								className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition"
+							>Prev</button>
+							{Array.from({ length: Math.ceil(donations.length / pageSize) }, (_, i) => i + 1).map(page => (
+								<button
+									key={page}
+									onClick={() => setCurrentPage(page)}
+									className={`px-3 py-1 rounded border text-sm font-semibold transition ${currentPage === page ? 'bg-blue-600 text-white' : 'hover:bg-blue-50'}`}
+								>{page}</button>
+							))}
+							<button
+								disabled={currentPage === Math.ceil(donations.length / pageSize)}
+								onClick={() => setCurrentPage(p => p + 1)}
+								className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition"
+							>Next</button>
+							<button
+								disabled={currentPage === Math.ceil(donations.length / pageSize)}
+								onClick={() => setCurrentPage(Math.ceil(donations.length / pageSize))}
+								className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition"
+							>Last</button>
+						</div>
+					</div>
+				)}
 
 			{/* Delete Confirmation Modal */}
 			{showDeleteModal && (
