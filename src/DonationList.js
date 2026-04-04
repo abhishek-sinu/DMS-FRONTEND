@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import DonationForm from './DonationForm';
 import DonationEdit from './DonationEdit';
 import DashboardLayout from './DashboardLayout';
+import ImportDonations from './ImportDonations';
 
 function isAuthenticated() {
 	return !!localStorage.getItem('token');
@@ -97,7 +98,10 @@ function DonationList() {
 				<h2 id="donation-list-title" className="text-2xl font-bold mb-4">Donation List</h2>
 				{error && <div className="text-center mb-2 text-red-500">{error}</div>}
 				{deleteSuccess && <div className="text-center mb-2 text-green-600">{deleteSuccess}</div>}
-				<button className="mb-4 bg-green-600 text-white py-2 px-4 rounded font-semibold hover:bg-green-700 transition" onClick={() => setShowAdd(true)} aria-label="Add Donation">Add Donation</button>
+				<div className="flex gap-2 mb-4">
+					<button className="bg-green-600 text-white py-2 px-4 rounded font-semibold hover:bg-green-700 transition" onClick={() => setShowAdd(true)} aria-label="Add Donation">Add Donation</button>
+					<ImportDonations onImport={fetchDonations} />
+				</div>
 				{showAdd && <DonationForm onSuccess={() => { setShowAdd(false); fetchDonations(); }} onCancel={() => setShowAdd(false)} />}
 				{editId && <DonationEdit donationId={editId} onSuccess={() => { setEditId(null); fetchDonations(); }} onCancel={() => setEditId(null)} />}
 				<table className="min-w-full border mt-4" style={{ width: '100%' }} aria-label="Donation List Table">
