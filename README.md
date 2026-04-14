@@ -2,9 +2,9 @@
 
 ## How to Start the Frontend
 
-1. Open a terminal and navigate to the `DMS-FRONTEND-GIT` directory:
+1. Open a terminal and navigate to the `DMS-FRONTEND` directory:
 	```sh
-	cd DMS-FRONTEND-GIT
+	cd DMS-FRONTEND
 	```
 2. Install dependencies:
 	```sh
