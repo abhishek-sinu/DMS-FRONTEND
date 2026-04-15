@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 function Signup() {
-	const API_URL = import.meta.env.VITE_API_URL;
+	const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 	const [username, setUsername] = useState('');
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
@@ -29,7 +29,7 @@ function Signup() {
 				setError(data.error || 'Signup failed');
 			}
 		} catch (err) {
-			setError('Server error');
+			setError('Server error '+ err + ' at ' + API_URL);
 		}
 	};
 

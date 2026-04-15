@@ -14,20 +14,21 @@ function Login() {
 		setError('');
 		setLoading(true);
 		try {
+			console.log('[LOGIN] Submitting:', { username });
 			const res = await fetch(`${API_URL}/api/auth/login`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ username, password })
 			});
 			const data = await res.json();
-			if (res.ok && data.success) {
+			if ( (res.ok && data.success) ) {
 				localStorage.setItem('token', data.token);
 				navigate('/dashboard');
 			} else {
 				setError(data.error || 'Login failed');
 			}
 		} catch (err) {
-			setError('Server error');
+			setError('Server error '+err);
 		}
 		setLoading(false);
 	};
@@ -140,3 +141,4 @@ function Login() {
 }
 
 export default Login;
+
