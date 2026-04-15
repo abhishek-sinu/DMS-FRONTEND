@@ -150,78 +150,98 @@ function GiftList() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-7xl mx-auto mt-10 bg-white p-8 rounded-xl shadow-lg">
+      <div className="overflow-x-auto mt-6">
+  <table className="min-w-full border border-gray-300 rounded-lg shadow-sm text-sm" style={{ width: '100%' }}>
+    
+    {/* Table Header */}
+    <thead>
+      <tr className="bg-blue-50 text-blue-900">
+        <th className="py-3 px-5 border-b font-semibold">Phone</th>
+        <th className="py-3 px-5 border-b font-semibold">Gift Description</th>
+        <th className="py-3 px-5 border-b font-semibold">Value</th>
+        <th className="py-3 px-5 border-b font-semibold">Date</th>
+        <th className="py-3 px-5 border-b font-semibold">Actions</th>
+      </tr>
+    </thead>
 
-        <h2 className="text-3xl font-bold mb-6">Gifts</h2>
+    {/* Table Body */}
+    <tbody>
+      {(gifts || [])
+        .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+        .map(gift => (
+          <tr key={gift.id} className="hover:bg-blue-100 transition">
+            
+            {/* Phone */}
+            <td className="py-3 px-5 border-b text-gray-700">
+              {gift.phone || '-'}
+            </td>
 
-        {/* Actions */}
-        <div className="flex gap-2 mb-4 flex-wrap">
-          <button onClick={() => setShowAdd(true)} className="bg-green-600 text-white px-4 py-2 rounded">
-            Add Gift
-          </button>
+            {/* Gift Description */}
+            <td className="py-3 px-5 border-b font-medium text-gray-900">
+              {gift.gift_name}
+              {gift.description && (
+                <div className="text-xs text-gray-500">{gift.description}</div>
+              )}
+            </td>
 
-          <button onClick={() => handleExport('xls')} className="bg-green-700 text-white px-4 py-2 rounded">
-            Export Excel
-          </button>
+            {/* Value */}
+            <td className="py-3 px-5 border-b text-gray-700">
+              ₹ {gift.value}
+            </td>
 
-          <button onClick={() => handleExport('pdf')} className="bg-red-600 text-white px-4 py-2 rounded">
-            Export PDF
-          </button>
-        </div>
+            {/* Date */}
+            <td className="py-3 px-5 border-b text-gray-700">
+              {gift.date_given ? gift.date_given.substring(0, 10) : '-'}
+            </td>
 
-        {/* Import */}
-        <ImportGifts onImport={fetchGifts} />
+            {/* Actions */}
+            <td className="py-3 px-5 border-b">
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
+                
+                <button
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-sm font-semibold hover:bg-blue-700 transition"
+                  onClick={() => setEditGift(gift)}
+                >
+                  Edit
+                </button>
 
-        {/* Forms */}
-        {showAdd && <GiftForm onSuccess={handleAdd} />}
-        {editGift && (
-          <GiftEdit
-            gift={editGift}
-            onSuccess={handleEdit}
-            onCancel={() => setEditGift(null)}
-          />
-        )}
+                <button
+                  className="bg-red-600 text-white px-4 py-2 rounded-lg shadow-sm font-semibold hover:bg-red-700 transition"
+                  onClick={() => setDeleteGiftId(gift.id)}
+                >
+                  Delete
+                </button>
 
-        {/* Table */}
-        <table className="w-full border mt-4">
-          <thead>
-            <tr className="bg-gray-100">
-              <th>Phone</th>
-              <th>Gift</th>
-              <th>Description</th>
-              <th>Value</th>
-              <th>Date</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
+              </div>
 
-          <tbody>
-            {gifts
-              .slice((currentPage - 1) * pageSize, currentPage * pageSize)
-              .map(gift => (
-                <tr key={gift.id}>
-                  <td>{gift.phone}</td>
-                  <td>{gift.gift_name}</td>
-                  <td>{gift.description}</td>
-                  <td>{gift.value}</td>
-                  <td>{gift.date_given}</td>
+              {/* Delete Confirmation */}
+              {deleteGiftId === gift.id && (
+                <div className="mt-2">
+                  <span>Are you sure? </span>
 
-                  <td>
-                    <button onClick={() => setEditGift(gift)}>Edit</button>
-                    <button onClick={() => setDeleteGiftId(gift.id)}>Delete</button>
+                  <button
+                    className="bg-red-700 text-white px-3 py-1 rounded mr-2"
+                    onClick={() => handleDelete(gift.id)}
+                    disabled={deleteLoading}
+                  >
+                    {deleteLoading ? 'Deleting...' : 'Yes, Delete'}
+                  </button>
 
-                    {deleteGiftId === gift.id && (
-                      <div>
-                        <span>Confirm?</span>
-                        <button onClick={() => handleDelete(gift.id)}>Yes</button>
-                        <button onClick={() => setDeleteGiftId(null)}>Cancel</button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
+                  <button
+                    className="bg-gray-400 text-white px-3 py-1 rounded"
+                    onClick={() => setDeleteGiftId(null)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </td>
+
+          </tr>
+        ))}
+    </tbody>
+
+  </table>
 
         {/* Pagination */}
         {gifts.length > pageSize && (

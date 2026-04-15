@@ -10,7 +10,7 @@
 	```sh
 	npm install
 	```
-3. Start the frontend development server(nothing may happen in first run, second run it says compiled succesfully! It was success in 3rd run to me not sure why at the moment! Ask for username & Passsword to login to website):
+3. Start the frontend development server(nothing may happen in first run, second run it says compiled succesfully! It was success in 3rd run to me not sure why at the moment! Ask for username & Passsword to login to website or create via signup to store in local database):
 	```sh
 	npm start
 	```
