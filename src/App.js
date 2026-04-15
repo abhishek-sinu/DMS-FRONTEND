@@ -6,6 +6,8 @@ import DonationList from './DonationList';
 import DonorList from './DonorList';
 import CultivatorList from './CultivatorList';
 import ReportList from './ReportList';
+import GiftList from './GiftList';
+
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 function App() {
@@ -19,6 +21,7 @@ function App() {
 				   <Route path="/donors" element={<DonorList />} />
                    <Route path="/cultivators" element={<CultivatorList />} />
                    <Route path="/reports" element={<ReportList />} />
+				   <Route path="/gifts" element={<GiftList />} />
 			</Routes>
 		</BrowserRouter>
 	);
