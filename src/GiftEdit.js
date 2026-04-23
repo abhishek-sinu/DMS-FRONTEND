@@ -28,7 +28,7 @@ function GiftEdit({ gift, onSuccess, onCancel }) {
         created_at: gift.created_at
       });
     } catch (err) {
-      setError('Failed to update gift');
+      setError('Failed to update gift with error: ' + err.message);
     }
 
     setLoading(false);

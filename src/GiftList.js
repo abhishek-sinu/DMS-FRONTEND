@@ -14,7 +14,6 @@ function GiftList() {
   const [error, setError] = useState('');
   const [editGift, setEditGift] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
-  const [editId, setEditId] = useState(null);//need to check
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   const [pageSize, setPageSize] = useState(10);
@@ -50,6 +49,50 @@ function GiftList() {
       });
   };
 
+const handleAdd = async ({ phone, gift_name, description, value, date_given }) => {
+    setLoading(true);
+    setError('');
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/gifts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ phone, gift_name, description, value, date_given, created_at: new Date().toISOString().slice(0, 19).replace('T', ' ') })
+      });
+      if (!res.ok) throw new Error('Failed to add gift');
+      setShowAdd(false);
+      fetchGifts();
+    } catch (err) {
+      setError('Failed to add gift: ' + err.message);
+      setLoading(false);
+    }
+  };
+
+  const handleEdit = async ({ id, phone, gift_name, description, value, date_given }) => {
+    setLoading(true);
+    setError('');
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/gifts/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ phone, gift_name, description, value, date_given })
+      });
+      if (!res.ok) throw new Error('Failed to update gift');
+      setEditGift(null);
+      fetchGifts();
+    } catch (err) {
+      setError('Error: ' + err.message);
+      setLoading(false);
+    }
+  };
+
   const [deleteSuccess, setDeleteSuccess] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
@@ -82,7 +125,7 @@ function GiftList() {
 				if (res.ok) {
 					setDeleteSuccess('Gift successfully deleted.');
 					setError('');
-					setDonations(prev => prev.filter(d => d.id !== deleteId));
+					setGifts(prev => prev.filter(g => g.id !== deleteId));
 					setDeleteSuccess('');
 				} else {
 					setError('Failed to delete gift');
@@ -144,22 +187,16 @@ return (
       {/* Forms */}
       {showAdd && (
         <GiftForm
-          onSuccess={() => {
-            setShowAdd(false);
-            fetchGifts();
-          }}
+          onSuccess={handleAdd}
           onCancel={() => setShowAdd(false)}
         />
       )}
 
-      {editId && (
+      {editGift && (
         <GiftEdit
-          giftId={editId}
-          onSuccess={() => {
-            setEditId(null);
-            fetchGifts();
-          }}
-          onCancel={() => setEditId(null)}
+          gift={editGift}
+          onSuccess={handleEdit}
+          onCancel={() => setEditGift(null)}
         />
       )}
 
@@ -217,7 +254,7 @@ return (
                     
                     <button
                       className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition"
-                      onClick={() => setEditId(gift.id)}
+                      onClick={() => setEditGift(gift)}
                     >
                       Edit
                     </button>
