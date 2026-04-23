@@ -14,7 +14,7 @@ function GiftList() {
   const [error, setError] = useState('');
   const [editGift, setEditGift] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
-  const [deleteGiftId, setDeleteGiftId] = useState(null);
+  const [editId, setEditId] = useState(null);//need to check
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   const [pageSize, setPageSize] = useState(10);
@@ -41,7 +41,7 @@ function GiftList() {
     })
       .then(res => res.json())
       .then(data => {
-        setGifts(data.data || []);
+        setGifts(data.data || []);//data
         setLoading(false);
       })
       .catch(() => {
@@ -50,218 +50,264 @@ function GiftList() {
       });
   };
 
-  // ADD
-  const handleAdd = async (gift) => {
-    setLoading(true);
-    setError('');
-    const token = localStorage.getItem('token');
+  const [deleteSuccess, setDeleteSuccess] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
+  const [deleteInput, setDeleteInput] = useState('');
 
-    try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/gifts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(gift)
-      });
+  const openDeleteModal = (id) => {
+		console.log('openDeleteModal called with id:', id);
+		setDeleteId(id);
+		setDeleteInput('');
+		setShowDeleteModal(true);
+	};
 
-      if (!res.ok) throw new Error();
-      setShowAdd(false);
-      fetchGifts();
+	const closeDeleteModal = () => {
+		setShowDeleteModal(false);
+		setDeleteId(null);
+		setDeleteInput('');
+	};
 
-    } catch {
-      setError('Failed to add gift');
-      setLoading(false);
-    }
-  };
+  const confirmDelete = () => {
+		if (deleteInput !== 'delete') {
+			setError('Deletion cancelled. Type "delete" to confirm.');
+			return;
+		}
+		const token = localStorage.getItem('token');
+		fetch(`${process.env.REACT_APP_API_URL}/api/gifts/${deleteId}`, {
+			method: 'DELETE',
+			headers: { Authorization: `Bearer ${token}` }
+		})
+			.then(res => {
+				if (res.ok) {
+					setDeleteSuccess('Gift successfully deleted.');
+					setError('');
+					setDonations(prev => prev.filter(d => d.id !== deleteId));
+					setDeleteSuccess('');
+				} else {
+					setError('Failed to delete gift');
+				}
+				closeDeleteModal();
+			})
+			.catch(() => {
+				setError('Failed to delete gift');
+				closeDeleteModal();
+			});
+	};
 
-  // EDIT
-  const handleEdit = async (gift) => {
-    setLoading(true);
-    setError('');
-    const token = localStorage.getItem('token');
 
-    try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/gifts/${gift.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(gift)
-      });
+	if (loading) {
+		return <div className="text-center mt-8">Loading gifts...</div>;
+	}
 
-      if (!res.ok) throw new Error();
-      setEditGift(null);
-      fetchGifts();
+return (
+  <DashboardLayout user={null}>
+    <div className="max-w-6xl mx-auto mt-8 bg-white p-6 rounded shadow" aria-labelledby="gift-list-title">
+      
+      <h2 id="gift-list-title" className="text-2xl font-bold mb-4">Gift List</h2>
 
-    } catch {
-      setError('Failed to update gift');
-      setLoading(false);
-    }
-  };
+      {error && <div className="text-center mb-2 text-red-500">{error}</div>}
+      {deleteSuccess && <div className="text-center mb-2 text-green-600">{deleteSuccess}</div>}
 
-  // DELETE
-  const handleDelete = async (id) => {
-    setDeleteLoading(true);
-    setError('');
-    const token = localStorage.getItem('token');
+      {/* Top Actions */}
+      <div className="flex items-center gap-2 mb-4">
+        <button
+          className="bg-green-600 text-white py-2 px-4 rounded font-semibold hover:bg-green-700 transition"
+          onClick={() => setShowAdd(true)}
+          aria-label="Add Gift"
+        >
+          Add Gift
+        </button>
 
-    try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/gifts/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (!res.ok) throw new Error();
-      setDeleteGiftId(null);
-      fetchGifts();
-
-    } catch {
-      setError('Failed to delete gift');
-    }
-
-    setDeleteLoading(false);
-  };
-
-  // EXPORT
-  const handleExport = (type) => {
-    setExportError('');
-    const token = localStorage.getItem('token');
-
-    fetch(`${process.env.REACT_APP_API_URL}/api/gifts/export/${type}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(res => {
-        if (!res.ok) throw new Error();
-        return res.blob();
-      })
-      .then(blob => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `gifts.${type === 'xls' ? 'xlsx' : 'pdf'}`;
-        a.click();
-        window.URL.revokeObjectURL(url);
-      })
-      .catch(() => setExportError('Export failed'));
-  };
-
-  return (
-    <DashboardLayout>
-      <div className="overflow-x-auto mt-6">
-  <table className="min-w-full border border-gray-300 rounded-lg shadow-sm text-sm" style={{ width: '100%' }}>
-    
-    {/* Table Header */}
-    <thead>
-      <tr className="bg-blue-50 text-blue-900">
-        <th className="py-3 px-5 border-b font-semibold">Phone</th>
-        <th className="py-3 px-5 border-b font-semibold">Gift Description</th>
-        <th className="py-3 px-5 border-b font-semibold">Value</th>
-        <th className="py-3 px-5 border-b font-semibold">Date</th>
-        <th className="py-3 px-5 border-b font-semibold">Actions</th>
-      </tr>
-    </thead>
-
-    {/* Table Body */}
-    <tbody>
-      {(gifts || [])
-        .slice((currentPage - 1) * pageSize, currentPage * pageSize)
-        .map(gift => (
-          <tr key={gift.id} className="hover:bg-blue-100 transition">
-            
-            {/* Phone */}
-            <td className="py-3 px-5 border-b text-gray-700">
-              {gift.phone || '-'}
-            </td>
-
-            {/* Gift Description */}
-            <td className="py-3 px-5 border-b font-medium text-gray-900">
-              {gift.gift_name}
-              {gift.description && (
-                <div className="text-xs text-gray-500">{gift.description}</div>
-              )}
-            </td>
-
-            {/* Value */}
-            <td className="py-3 px-5 border-b text-gray-700">
-              ₹ {gift.value}
-            </td>
-
-            {/* Date */}
-            <td className="py-3 px-5 border-b text-gray-700">
-              {gift.date_given ? gift.date_given.substring(0, 10) : '-'}
-            </td>
-
-            {/* Actions */}
-            <td className="py-3 px-5 border-b">
-              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
-                
-                <button
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-sm font-semibold hover:bg-blue-700 transition"
-                  onClick={() => setEditGift(gift)}
-                >
-                  Edit
-                </button>
-
-                <button
-                  className="bg-red-600 text-white px-4 py-2 rounded-lg shadow-sm font-semibold hover:bg-red-700 transition"
-                  onClick={() => setDeleteGiftId(gift.id)}
-                >
-                  Delete
-                </button>
-
-              </div>
-
-              {/* Delete Confirmation */}
-              {deleteGiftId === gift.id && (
-                <div className="mt-2">
-                  <span>Are you sure? </span>
-
-                  <button
-                    className="bg-red-700 text-white px-3 py-1 rounded mr-2"
-                    onClick={() => handleDelete(gift.id)}
-                    disabled={deleteLoading}
-                  >
-                    {deleteLoading ? 'Deleting...' : 'Yes, Delete'}
-                  </button>
-
-                  <button
-                    className="bg-gray-400 text-white px-3 py-1 rounded"
-                    onClick={() => setDeleteGiftId(null)}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              )}
-            </td>
-
-          </tr>
-        ))}
-    </tbody>
-
-  </table>
-
-        {/* Pagination */}
-        {gifts.length > pageSize && (
-          <div className="mt-4">
-            <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>Prev</button>
-            <span className="mx-2">Page {currentPage}</span>
-            <button
-              disabled={currentPage === Math.ceil(gifts.length / pageSize)}
-              onClick={() => setCurrentPage(p => p + 1)}
-            >
-              Next
-            </button>
-          </div>
-        )}
-
-        {error && <div className="text-red-500 mt-2">{error}</div>}
-        {exportError && <div className="text-red-500 mt-2">{exportError}</div>}
+        <div className="ml-auto flex items-center gap-2">
+          <label className="text-sm font-semibold text-gray-600">Show:</label>
+          <select
+            value={pageSize}
+            onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+            className="border rounded px-2 py-1 text-sm"
+          >
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={30}>30</option>
+            <option value={50}>50</option>
+            <option value={gifts.length}>All</option>
+          </select>
+          <span className="text-sm text-gray-500">per page</span>
+        </div>
       </div>
-    </DashboardLayout>
-  );
-}
 
+      {/* Import */}
+      <div className="mb-4">
+        <ImportGifts onImport={fetchGifts} />
+      </div>
+
+      {/* Forms */}
+      {showAdd && (
+        <GiftForm
+          onSuccess={() => {
+            setShowAdd(false);
+            fetchGifts();
+          }}
+          onCancel={() => setShowAdd(false)}
+        />
+      )}
+
+      {editId && (
+        <GiftEdit
+          giftId={editId}
+          onSuccess={() => {
+            setEditId(null);
+            fetchGifts();
+          }}
+          onCancel={() => setEditId(null)}
+        />
+      )}
+
+      {/* Table */}
+      <table className="min-w-full border mt-4" style={{ width: '100%' }} aria-label="Gift List Table">
+        <thead>
+          <tr className="bg-gray-100">
+            <th className="py-2 px-4 border">Phone</th>
+            <th className="py-2 px-4 border">Gift Description</th>
+            <th className="py-2 px-4 border">Value</th>
+            <th className="py-2 px-4 border">Date</th>
+            <th className="py-2 px-4 border">Actions</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {(gifts || [])
+            .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+            .map((gift, idx) => (
+              <tr
+                key={gift.id}
+                tabIndex={0}
+                aria-label={`Gift row ${(currentPage - 1) * pageSize + idx + 1}`}
+                className="focus:outline-none focus:ring-2 focus:ring-blue-400"
+              >
+
+                {/* Phone */}
+                <td className="py-2 px-4 border">
+                  {gift.phone}
+                </td>
+
+                {/* Gift Description */}
+                <td className="py-2 px-4 border">
+                  {gift.gift_name}
+                  {gift.description && (
+                    <div className="text-xs text-gray-500">{gift.description}</div>
+                  )}
+                </td>
+
+                {/* Value */}
+                <td className="py-2 px-4 border">
+                  ₹ {Number(gift.value).toLocaleString()}
+                </td>
+
+                {/* Date */}
+                <td className="py-2 px-4 border">
+                  {gift.date_given
+                    ? new Date(gift.date_given).toLocaleDateString('en-IN')
+                    : '-'}
+                </td>
+
+                {/* Actions */}
+                <td className="py-2 px-4 border">
+                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
+                    
+                    <button
+                      className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition"
+                      onClick={() => setEditId(gift.id)}
+                    >
+                      Edit
+                    </button>
+
+                    <button
+                      className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition"
+                      onClick={() => openDeleteModal(gift.id)}
+                    >
+                      Delete
+                    </button>
+
+                  </div>
+                </td>
+
+              </tr>
+            ))}
+        </tbody>
+      </table>
+
+      {/* Pagination */}
+      {gifts.length > pageSize && (
+        <div className="flex items-center justify-between mt-4">
+          <span className="text-sm text-gray-600">
+            Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, gifts.length)} of {gifts.length}
+          </span>
+
+          <div className="flex gap-1">
+            <button disabled={currentPage === 1} onClick={() => setCurrentPage(1)} className="px-3 py-1 border">First</button>
+            <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-3 py-1 border">Prev</button>
+
+            {Array.from({ length: Math.ceil(gifts.length / pageSize) }, (_, i) => i + 1).map(page => (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                className={`px-3 py-1 border ${currentPage === page ? 'bg-blue-600 text-white' : ''}`}
+              >{page}</button>
+            ))}
+
+            <button disabled={currentPage === Math.ceil(gifts.length / pageSize)} onClick={() => setCurrentPage(p => p + 1)} className="px-3 py-1 border">Next</button>
+            <button disabled={currentPage === Math.ceil(gifts.length / pageSize)} onClick={() => setCurrentPage(Math.ceil(gifts.length / pageSize))} className="px-3 py-1 border">Last</button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md animate-fadeIn">
+            
+            <h3 className="text-xl font-bold mb-4 text-center text-red-600">
+              Confirm Deletion
+            </h3>
+
+            <p className="mb-4 text-center">
+              Type <span className="font-mono font-bold text-red-500">delete</span> to confirm deletion of this gift.
+            </p>
+
+            <input
+              className="border p-2 rounded w-full mb-4 focus:ring-2 focus:ring-red-400"
+              value={deleteInput}
+              onChange={e => setDeleteInput(e.target.value)}
+              placeholder="Type 'delete' here"
+              autoFocus
+            />
+
+            <div className="flex justify-center space-x-4">
+              
+              <button
+                className="bg-gray-300 text-gray-800 px-4 py-2 rounded font-semibold hover:bg-gray-400 transition"
+                onClick={closeDeleteModal}
+              >
+                Cancel
+              </button>
+
+              <button
+                className="bg-red-600 text-white px-4 py-2 rounded font-semibold hover:bg-red-700 transition"
+                onClick={confirmDelete}
+              >
+                Delete
+              </button>
+
+            </div>
+
+          </div>
+        </div>
+      )}
+
+    </div>
+  </DashboardLayout>
+);
+}
 export default GiftList;
