@@ -60,7 +60,7 @@ function Dashboard() {
 						</div>
 						<div>
 							<h1 className="text-2xl font-bold">Welcome back, {user.username}!</h1>
-							<p className="text-blue-200 text-sm">Manage donors, donations and cultivators from your dashboard.</p>
+							<p className="text-blue-200 text-sm">Manage donors, donations, cultivators and gifts from your dashboard.</p>
 						</div>
 					</div>
 				</div>
