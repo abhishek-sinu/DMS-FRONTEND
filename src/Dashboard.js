@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DashboardLayout from './DashboardLayout';
 function Dashboard() {
 	const API_URL = process.env.REACT_APP_API_URL;
+	const navigate = useNavigate();
 	const [user, setUser] = useState(null);
 	const [stats, setStats] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [modalType, setModalType] = useState(null);
 	const [modalData, setModalData] = useState([]);
 	const [modalLoading, setModalLoading] = useState(false);
+	const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+	const [detailsLoading, setDetailsLoading] = useState(false);
+	const [donorDetails, setDonorDetails] = useState(null);
 
 	useEffect(() => {
 		const token = localStorage.getItem('token');
@@ -36,6 +41,8 @@ function Dashboard() {
 
 	const openModal = (type) => {
 		setModalType(type);
+		setDetailsModalOpen(false);
+		setDonorDetails(null);
 		setModalLoading(true);
 		const token = localStorage.getItem('token');
 		const endpoint = type === 'birthdays' ? 'upcoming-birthdays' : 'upcoming-anniversaries';
@@ -45,6 +52,20 @@ function Dashboard() {
 			.then(res => res.json())
 			.then(data => { setModalData(Array.isArray(data) ? data : []); setModalLoading(false); })
 			.catch(() => { setModalData([]); setModalLoading(false); });
+	};
+
+	const openDonorDetails = (donorId) => {
+		if (!donorId) return;
+		setDetailsModalOpen(true);
+		setDetailsLoading(true);
+		setDonorDetails(null);
+		const token = localStorage.getItem('token');
+		fetch(`${API_URL}/api/donors/${donorId}`, {
+			headers: { Authorization: `Bearer ${token}` }
+		})
+			.then(res => res.json())
+			.then(data => { setDonorDetails(data); setDetailsLoading(false); })
+			.catch(() => { setDetailsLoading(false); });
 	};
 
 	return (
@@ -97,7 +118,7 @@ function Dashboard() {
 				<>
 					{/* Summary Cards */}
 					<div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
-						<div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 p-6 flex items-center gap-4 border border-gray-100 group cursor-default">
+						<div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 p-6 flex items-center gap-4 border border-gray-100 group cursor-pointer" onClick={() => navigate('/donors')}>
 							<div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
 								<svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
 							</div>
@@ -106,16 +127,18 @@ function Dashboard() {
 								<p className="text-sm text-gray-500 font-medium mt-0.5">Total Donors</p>
 							</div>
 						</div>
-						<div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 p-6 flex items-center gap-4 border border-gray-100 group cursor-default">
+						<div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 p-6 flex items-center gap-4 border border-gray-100 group cursor-pointer" onClick={() => navigate('/donations')}>
 							<div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
 								<svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" strokeWidth="2" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 7h6M9 10h6M12 17l-3-4h4.5a2.5 2.5 0 000-5" /></svg>
 							</div>
 							<div>
-								<span className="text-3xl font-extrabold text-gray-800">₹{stats.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+								<span className="text-xl font-extrabold text-gray-800 block max-w-[160px] truncate" title={stats.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}>
+									₹{stats.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+								</span>
 								<p className="text-sm text-gray-500 font-medium mt-0.5">Total Donations</p>
 							</div>
 						</div>
-						<div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 p-6 flex items-center gap-4 border border-gray-100 group cursor-default">
+						<div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 p-6 flex items-center gap-4 border border-gray-100 group cursor-pointer" onClick={() => navigate('/donations')}>
 							<div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
 								<svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
 							</div>
@@ -124,7 +147,7 @@ function Dashboard() {
 								<p className="text-sm text-gray-500 font-medium mt-0.5">Donation Records</p>
 							</div>
 						</div>
-						<div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 p-6 flex items-center gap-4 border border-gray-100 group cursor-default">
+						<div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 p-6 flex items-center gap-4 border border-gray-100 group cursor-pointer" onClick={() => navigate('/cultivators')}>
 							<div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
 								<svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
 							</div>
@@ -165,78 +188,39 @@ function Dashboard() {
 						</div>
 					</div>
 
-					{/* Top Donors & Recent Donations */}
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-						{/* Top Donors */}
-						<div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
-							<div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2" style={{ background: 'linear-gradient(135deg, #eff6ff, #eef2ff)' }}>
-								<svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>
-								<h3 className="text-lg font-bold text-gray-800">Top 5 Donors</h3>
-							</div>
-							<div className="p-5">
-								{stats.topDonors && stats.topDonors.length > 0 ? (
-									<table className="w-full text-sm">
-										<thead>
-											<tr className="text-gray-500 text-xs uppercase tracking-wider">
-												<th className="px-3 py-2 text-left">#</th>
-												<th className="px-3 py-2 text-left">Name</th>
-												<th className="px-3 py-2 text-left">Phone</th>
-												<th className="px-3 py-2 text-right">Total</th>
-											</tr>
-										</thead>
-										<tbody>
-											{stats.topDonors.map((d, i) => (
-												<tr key={i} className="border-t border-gray-50 hover:bg-blue-50/50 transition">
-													<td className="px-3 py-3">
-														<span className={`w-6 h-6 inline-flex items-center justify-center rounded-full text-xs font-bold ${i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-gray-100 text-gray-600' : i === 2 ? 'bg-orange-100 text-orange-700' : 'bg-gray-50 text-gray-500'}`}>{i + 1}</span>
-													</td>
-													<td className="px-3 py-3 font-medium text-gray-800">{d.name}</td>
-													<td className="px-3 py-3 text-gray-500">{d.phone || '-'}</td>
-													<td className="px-3 py-3 text-right font-bold text-emerald-600">₹{parseFloat(d.total).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-												</tr>
-											))}
-										</tbody>
-									</table>
-								) : (
-									<div className="text-gray-400 text-center py-6">No data</div>
-								)}
-							</div>
+					{/* Recent Donations - Full Width */}
+					<div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden mb-8">
+						<div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2" style={{ background: 'linear-gradient(135deg, #f0fdf4, #ecfdf5)' }}>
+							<svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+							<h3 className="text-lg font-bold text-gray-800">Recent Donations</h3>
 						</div>
-
-						{/* Recent Donations */}
-						<div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
-							<div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2" style={{ background: 'linear-gradient(135deg, #f0fdf4, #ecfdf5)' }}>
-								<svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-								<h3 className="text-lg font-bold text-gray-800">Recent Donations</h3>
-							</div>
-							<div className="p-5">
-								{stats.recentDonations && stats.recentDonations.length > 0 ? (
-									<table className="w-full text-sm">
-										<thead>
-											<tr className="text-gray-500 text-xs uppercase tracking-wider">
-												<th className="px-3 py-2 text-left">Donor</th>
-												<th className="px-3 py-2 text-right">Amount</th>
-												<th className="px-3 py-2 text-left">Date</th>
-												<th className="px-3 py-2 text-left">Mode</th>
+						<div className="p-5">
+							{stats.recentDonations && stats.recentDonations.length > 0 ? (
+								<table className="w-full text-sm">
+									<thead>
+										<tr className="text-gray-500 text-xs uppercase tracking-wider">
+											<th className="px-3 py-2 text-left">Donor</th>
+											<th className="px-3 py-2 text-right">Amount</th>
+											<th className="px-3 py-2 text-left">Date</th>
+											<th className="px-3 py-2 text-left">Mode</th>
+										</tr>
+									</thead>
+									<tbody>
+										{stats.recentDonations.map((d, i) => (
+											<tr key={i} className="border-t border-gray-50 hover:bg-emerald-50/50 transition">
+												<td className="px-3 py-3 font-medium text-gray-800">{d.donor_name || '-'}</td>
+												<td className="px-3 py-3 text-right font-bold text-emerald-600">₹{parseFloat(d.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+												<td className="px-3 py-3 text-gray-500">{d.transaction_date ? new Date(d.transaction_date).toLocaleDateString('en-IN') : '-'}</td>
+												<td className="px-3 py-3">
+													<span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 capitalize">{d.mode_of_payment || '-'}</span>
+												</td>
 											</tr>
-										</thead>
-										<tbody>
-											{stats.recentDonations.map((d, i) => (
-												<tr key={i} className="border-t border-gray-50 hover:bg-emerald-50/50 transition">
-													<td className="px-3 py-3 font-medium text-gray-800">{d.donor_name || '-'}</td>
-													<td className="px-3 py-3 text-right font-bold text-emerald-600">₹{parseFloat(d.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-													<td className="px-3 py-3 text-gray-500">{d.transaction_date ? new Date(d.transaction_date).toLocaleDateString('en-IN') : '-'}</td>
-													<td className="px-3 py-3">
-														<span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 capitalize">{d.mode_of_payment || '-'}</span>
-													</td>
-												</tr>
-											))}
-										</tbody>
-									</table>
-								) : (
-									<div className="text-gray-400 text-center py-6">No data</div>
-								)}
-							</div>
+										))}
+									</tbody>
+								</table>
+							) : (
+								<div className="text-gray-400 text-center py-6">No data</div>
+							)}
 						</div>
 					</div>
 				</>
@@ -265,22 +249,60 @@ function Dashboard() {
 									<thead>
 										<tr className="text-gray-500 text-xs uppercase tracking-wider">
 											<th className="px-3 py-2 text-left">#</th>
-											<th className="px-3 py-2 text-left">Name</th>
-											<th className="px-3 py-2 text-left">Phone</th>
-											<th className="px-3 py-2 text-left">{modalType === 'birthdays' ? 'Birthday' : 'Anniversary'}</th>
+											{modalType === 'birthdays' ? (
+												<>
+													<th className="px-3 py-2 text-left">Donor</th>
+													<th className="px-3 py-2 text-left">Family Member</th>
+													<th className="px-3 py-2 text-left">Relation</th>
+													<th className="px-3 py-2 text-left">Phone</th>
+													<th className="px-3 py-2 text-left">DOB</th>
+													<th className="px-3 py-2 text-left">Action</th>
+												</>
+											) : (
+												<>
+													<th className="px-3 py-2 text-left">Name</th>
+													<th className="px-3 py-2 text-left">Phone</th>
+													<th className="px-3 py-2 text-left">Anniversary</th>
+													<th className="px-3 py-2 text-left">Action</th>
+												</>
+											)}
 										</tr>
 									</thead>
 									<tbody>
 										{modalData.map((d, i) => (
 											<tr key={i} className="border-t border-gray-50 hover:bg-gray-50 transition">
 												<td className="px-3 py-3">{i + 1}</td>
-												<td className="px-3 py-3 font-medium text-gray-800">{d.name}</td>
-												<td className="px-3 py-3 text-gray-500">{d.phone || '-'}</td>
-												<td className="px-3 py-3">
-													{modalType === 'birthdays'
-														? (d.date_of_birth ? new Date(d.date_of_birth).toLocaleDateString('en-IN') : '-')
-														: (d.anniversary_date ? new Date(d.anniversary_date).toLocaleDateString('en-IN') : '-')}
-												</td>
+												{modalType === 'birthdays' ? (
+													<>
+														<td className="px-3 py-3 font-medium text-gray-800">{d.donor_name || '-'}</td>
+														<td className="px-3 py-3 text-gray-700">{d.person_type === 'family' ? (d.person_name || '-') : '-'}</td>
+														<td className="px-3 py-3 text-gray-500 capitalize">{d.person_type === 'family' ? (d.relationship || '-') : '-'}</td>
+														<td className="px-3 py-3 text-gray-500">{d.phone || '-'}</td>
+														<td className="px-3 py-3">{d.birthday ? new Date(d.birthday).toLocaleDateString('en-IN') : '-'}</td>
+														<td className="px-3 py-3">
+															<button
+																onClick={() => openDonorDetails(d.donor_id)}
+																className="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold hover:bg-blue-700 transition"
+															>
+																View
+															</button>
+														</td>
+													</>
+												) : (
+													<>
+														<td className="px-3 py-3 font-medium text-gray-800">{d.name}</td>
+														<td className="px-3 py-3 text-gray-500">{d.phone || '-'}</td>
+														<td className="px-3 py-3">{d.anniversary_date ? new Date(d.anniversary_date).toLocaleDateString('en-IN') : '-'}</td>
+														<td className="px-3 py-3">
+															<button
+																onClick={() => openDonorDetails(d.donor_id)}
+																className="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold hover:bg-blue-700 transition"
+															>
+																View
+															</button>
+														</td>
+													</>
+												)}
 											</tr>
 										))}
 									</tbody>
@@ -290,6 +312,61 @@ function Dashboard() {
 					</div>
 				</div>
 			)}
+
+				{detailsModalOpen && (
+					<div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+						<div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden">
+							<div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-blue-50">
+								<h3 className="text-lg font-bold text-gray-800">Donor Complete Details</h3>
+								<button onClick={() => setDetailsModalOpen(false)} className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition">&times;</button>
+							</div>
+							<div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(85vh - 64px)' }}>
+								{detailsLoading ? (
+									<div className="text-center text-gray-500 py-8">Loading details...</div>
+								) : !donorDetails ? (
+									<div className="text-center text-red-500 py-8">Failed to load donor details.</div>
+								) : (
+									<>
+										<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 text-sm">
+											<div><span className="font-semibold text-gray-600">Name:</span> <span className="text-gray-800">{donorDetails.name || '-'}</span></div>
+											<div><span className="font-semibold text-gray-600">Phone:</span> <span className="text-gray-800">{donorDetails.phone || '-'}</span></div>
+											<div><span className="font-semibold text-gray-600">Email:</span> <span className="text-gray-800">{donorDetails.email || '-'}</span></div>
+											<div><span className="font-semibold text-gray-600">Date of Birth:</span> <span className="text-gray-800">{donorDetails.date_of_birth ? new Date(donorDetails.date_of_birth).toLocaleDateString('en-IN') : '-'}</span></div>
+											<div><span className="font-semibold text-gray-600">Anniversary:</span> <span className="text-gray-800">{donorDetails.anniversary_date ? new Date(donorDetails.anniversary_date).toLocaleDateString('en-IN') : '-'}</span></div>
+											<div><span className="font-semibold text-gray-600">Address:</span> <span className="text-gray-800">{donorDetails.address || '-'}</span></div>
+										</div>
+
+										<div>
+											<h4 className="text-base font-bold text-gray-800 mb-3">Family Members</h4>
+											{Array.isArray(donorDetails.family_members) && donorDetails.family_members.length > 0 ? (
+												<table className="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+													<thead className="bg-gray-50">
+														<tr>
+															<th className="px-3 py-2 text-left">Name</th>
+															<th className="px-3 py-2 text-left">Relation</th>
+															<th className="px-3 py-2 text-left">DOB</th>
+														</tr>
+													</thead>
+													<tbody>
+														{donorDetails.family_members.map(member => (
+															<tr key={member.id} className="border-t border-gray-100">
+																<td className="px-3 py-2">{member.name || '-'}</td>
+																<td className="px-3 py-2 capitalize">{member.relation || '-'}</td>
+																<td className="px-3 py-2">{member.date_of_birth ? new Date(member.date_of_birth).toLocaleDateString('en-IN') : '-'}</td>
+															</tr>
+														))}
+													</tbody>
+												</table>
+											) : (
+												<div className="text-sm text-gray-500">No family members added.</div>
+											)}
+										</div>
+									</>
+								)}
+							</div>
+						</div>
+					</div>
+				)}
 		</DashboardLayout>
 	);
 }

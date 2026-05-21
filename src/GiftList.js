@@ -34,6 +34,7 @@ function GiftList() {
   const fetchGifts = () => {
     setLoading(true);
     const token = localStorage.getItem('token');
+    console.log('Fetching gifts with token:', token);
 
     fetch(`${process.env.REACT_APP_API_URL}/api/gifts`, {
       headers: { Authorization: `Bearer ${token}` }
@@ -62,16 +63,18 @@ const handleAdd = async ({ phone, gift_name, description, value, date_given }) =
         },
         body: JSON.stringify({ phone, gift_name, description, value, date_given, created_at: new Date().toISOString().slice(0, 19).replace('T', ' ') })
       });
-      if (!res.ok) throw new Error('Failed to add gift');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to add gift');
       setShowAdd(false);
       fetchGifts();
     } catch (err) {
       setError('Failed to add gift: ' + err.message);
       setLoading(false);
+      throw err;
     }
   };
 
-  const handleEdit = async ({ id, phone, gift_name, description, value, date_given }) => {
+  const handleEdit = async ({ id, phone, gift_name, description, value, date_given, created_at }) => {
     setLoading(true);
     setError('');
     const token = localStorage.getItem('token');
@@ -82,9 +85,10 @@ const handleAdd = async ({ phone, gift_name, description, value, date_given }) =
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ phone, gift_name, description, value, date_given })
+        body: JSON.stringify({ phone, gift_name, description, value, date_given, created_at })
       });
-      if (!res.ok) throw new Error('Failed to update gift');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update gift');
       setEditGift(null);
       fetchGifts();
     } catch (err) {
@@ -185,19 +189,31 @@ return (
       </div>
 
       {/* Forms */}
+
+      {/* Add Gift Modal */}
       {showAdd && (
-        <GiftForm
-          onSuccess={handleAdd}
-          onCancel={() => setShowAdd(false)}
-        />
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
+          <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-lg relative flex flex-col" style={{ maxHeight: '90vh', minWidth: '400px', overflowY: 'auto' }}>
+            <button type="button" onClick={() => setShowAdd(false)} className="absolute top-4 right-4 px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-lg font-semibold shadow transition-all" aria-label="Close">Close</button>
+            <GiftForm
+              onSuccess={handleAdd}
+            />
+          </div>
+        </div>
       )}
 
+      {/* Edit Gift Modal */}
       {editGift && (
-        <GiftEdit
-          gift={editGift}
-          onSuccess={handleEdit}
-          onCancel={() => setEditGift(null)}
-        />
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
+          <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-lg relative flex flex-col" style={{ maxHeight: '90vh', minWidth: '400px', overflowY: 'auto' }}>
+            <button type="button" onClick={() => setEditGift(null)} className="absolute top-4 right-4 px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-lg font-semibold shadow transition-all" aria-label="Close">Close</button>
+            <GiftEdit
+              gift={editGift}
+              onSuccess={handleEdit}
+              onCancel={() => setEditGift(null)}
+            />
+          </div>
+        </div>
       )}
 
       {/* Table */}

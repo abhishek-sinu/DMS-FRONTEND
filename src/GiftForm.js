@@ -50,7 +50,7 @@ function GiftForm({ onSuccess }) {
       setDateGiven('');
 
     } catch (err) {
-      setError('Failed to add gift');
+      setError(err.message || 'Failed to add gift');
     }
 
     setLoading(false);

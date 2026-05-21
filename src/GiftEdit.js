@@ -41,9 +41,9 @@ function GiftEdit({ gift, onSuccess, onCancel }) {
       <div className="mb-2">
         <label className="block text-sm font-medium mb-1">Phone</label>
         <input
-          className="w-full border rounded px-3 py-2"
+          className="w-full border rounded px-3 py-2 bg-gray-100 cursor-not-allowed"
           value={phone}
-          onChange={e => setPhone(e.target.value)}
+          disabled
           required
         />
       </div>
