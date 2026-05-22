@@ -1,10 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 function DashboardLayout({ children, user }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
 
   // Get user info from token if not passed as prop
   let currentUser = user;
@@ -41,26 +46,70 @@ function DashboardLayout({ children, user }) {
     )},
   ];
 
+  const renderNavLinks = (collapsed, onNavigate) => (
+    <ul className="space-y-1">
+      {links.map(link => {
+        const isActive = location.pathname === link.to;
+        return (
+          <li key={link.to}>
+            <Link
+              to={link.to}
+              onClick={onNavigate}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all duration-200 group relative ${isActive
+                ? 'bg-white/15 text-white shadow-lg'
+                : 'text-blue-200 hover:bg-white/8 hover:text-white'
+              }`}
+              title={collapsed ? link.label : ''}
+            >
+              {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-amber-400 rounded-r-full"></div>}
+              <span className={`flex-shrink-0 ${isActive ? 'text-amber-400' : 'text-blue-300 group-hover:text-amber-300'} transition`}>{link.icon}</span>
+              {!collapsed && <span className="text-sm">{link.label}</span>}
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
+  );
+
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: '#f0f4f8' }}>
+    <div className="min-h-screen flex flex-col overflow-x-hidden" style={{ background: '#f0f4f8' }}>
+      {/* Mobile backdrop — rendered here so it is never clipped by overflow-hidden children */}
+      {mobileMenuOpen && (
+        <button
+          type="button"
+          aria-label="Close menu"
+          className="md:hidden fixed inset-0 bg-black/50 z-30"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
       {/* Top Header */}
-      <header className="w-full text-white flex items-center justify-between px-6 py-0 shadow-lg z-50" style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 100%)', minHeight: '60px' }}>
-        <div className="flex items-center gap-3">
-          <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="p-1.5 rounded-lg hover:bg-white/10 transition mr-1" title="Toggle sidebar">
+      <header className="w-full text-white flex items-center justify-between px-3 sm:px-6 py-2 shadow-lg z-50" style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 100%)', minHeight: '60px' }}>
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <button
+            onClick={() => {
+              if (window.innerWidth < 768) {
+                setMobileMenuOpen(prev => !prev);
+              } else {
+                setSidebarCollapsed(!sidebarCollapsed);
+              }
+            }}
+            className="p-1.5 rounded-lg hover:bg-white/10 transition mr-1"
+            title="Toggle sidebar"
+          >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
           </button>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <div className="w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center backdrop-blur-sm">
               <img src="/logo.png" alt="ISKCON" className="h-6 w-6 object-contain invert" />
             </div>
-            <div className="flex flex-col">
-              <span className="text-lg font-bold tracking-wide leading-tight">ISKCON Donation Management</span>
-              <span className="text-[10px] text-blue-200 tracking-wider uppercase font-medium leading-tight">Temple Administration System</span>
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm sm:text-lg font-bold tracking-wide leading-tight truncate">ISKCON Donation Management</span>
+              <span className="hidden sm:block text-[10px] text-blue-200 tracking-wider uppercase font-medium leading-tight">Temple Administration System</span>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-3 bg-white/10 rounded-xl px-4 py-2 backdrop-blur-sm">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <div className="hidden sm:flex items-center gap-3 bg-white/10 rounded-xl px-4 py-2 backdrop-blur-sm">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white font-bold text-sm shadow-inner">
               {(currentUser?.username || 'U')[0].toUpperCase()}
             </div>
@@ -71,45 +120,47 @@ function DashboardLayout({ children, user }) {
           </div>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-1.5 bg-white/10 hover:bg-red-500 text-white px-4 py-2 rounded-xl font-semibold transition-all text-sm border border-white/20 hover:border-red-500"
+            className="flex items-center gap-1.5 bg-white/10 hover:bg-red-500 text-white px-3 sm:px-4 py-2 rounded-xl font-semibold transition-all text-sm border border-white/20 hover:border-red-500"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-            Logout
+            <span className="hidden sm:inline">Logout</span>
           </button>
         </div>
       </header>
 
-      <div className="flex flex-1">
-        {/* Sidebar */}
-        <aside className={`${sidebarCollapsed ? 'w-16' : 'w-60'} transition-all duration-300 flex flex-col py-4 min-h-full shadow-xl border-r border-blue-900/20 relative`} style={{ background: 'linear-gradient(180deg, #1e3a5f 0%, #172554 100%)' }}>
-          {/* Decorative top */}
-          <div className="h-0.5 mx-3 mb-4 rounded-full" style={{ background: 'linear-gradient(90deg, #f59e0b, #ef4444, #f59e0b)' }}></div>
+      <div className="flex flex-1 relative min-w-0 overflow-x-hidden">
 
-          <nav className="flex-1 px-2">
-            <ul className="space-y-1">
-              {links.map(link => {
-                const isActive = location.pathname === link.to;
-                return (
-                  <li key={link.to}>
-                    <Link
-                      to={link.to}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all duration-200 group relative ${isActive
-                        ? 'bg-white/15 text-white shadow-lg'
-                        : 'text-blue-200 hover:bg-white/8 hover:text-white'
-                      }`}
-                      title={sidebarCollapsed ? link.label : ''}
-                    >
-                      {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-amber-400 rounded-r-full"></div>}
-                      <span className={`flex-shrink-0 ${isActive ? 'text-amber-400' : 'text-blue-300 group-hover:text-amber-300'} transition`}>{link.icon}</span>
-                      {!sidebarCollapsed && <span className="text-sm">{link.label}</span>}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
+        {/* Mobile Sidebar — starts below the 60 px header so the first nav item is always visible */}
+        <aside
+          className={`md:hidden fixed top-[60px] bottom-0 left-0 z-40 w-72 max-w-[82vw] transform transition-all duration-300 flex flex-col shadow-xl border-r border-blue-900/20 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}
+          style={{ background: 'linear-gradient(180deg, #1e3a5f 0%, #172554 100%)' }}
+        >
+          {/* Decorative top */}
+          <div className="h-0.5 mx-3 mt-4 mb-4 rounded-full" style={{ background: 'linear-gradient(90deg, #f59e0b, #ef4444, #f59e0b)' }}></div>
+
+          <nav className="flex-1 px-2 overflow-y-auto">
+            {renderNavLinks(false, () => setMobileMenuOpen(false))}
           </nav>
 
           {/* Sidebar footer */}
+          <div className="px-4 pb-4">
+            <div className="border-t border-white/10 pt-3 mt-2">
+              <p className="text-[10px] text-blue-300/60 text-center leading-relaxed">Hare Kṛṣṇa</p>
+            </div>
+          </div>
+        </aside>
+
+        {/* Desktop Sidebar */}
+        <aside
+          className={`hidden md:flex ${sidebarCollapsed ? 'w-16' : 'w-60'} transition-all duration-300 flex-col py-4 min-h-full shadow-xl border-r border-blue-900/20 relative`}
+          style={{ background: 'linear-gradient(180deg, #1e3a5f 0%, #172554 100%)' }}
+        >
+          <div className="h-0.5 mx-3 mb-4 rounded-full" style={{ background: 'linear-gradient(90deg, #f59e0b, #ef4444, #f59e0b)' }}></div>
+
+          <nav className="flex-1 px-2">
+            {renderNavLinks(sidebarCollapsed, undefined)}
+          </nav>
+
           {!sidebarCollapsed && (
             <div className="px-4 pb-2">
               <div className="border-t border-white/10 pt-3 mt-2">
@@ -120,7 +171,7 @@ function DashboardLayout({ children, user }) {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-8 overflow-auto">{children}</main>
+        <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 overflow-x-hidden overflow-y-auto">{children}</main>
       </div>
     </div>
   );

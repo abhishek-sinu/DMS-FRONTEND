@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 
 export default function ImportDonations({ onImport }) {
   const fileInputRef = useRef();
+  const lastRows = useRef([]);
   const [importResult, setImportResult] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -46,6 +47,7 @@ export default function ImportDonations({ onImport }) {
         }
         return mapped;
       });
+      lastRows.current = rows;
       // Send to backend
       const token = localStorage.getItem('token');
       const res = await fetch(`${process.env.REACT_APP_API_URL}/api/donations/import`, {
@@ -63,6 +65,32 @@ export default function ImportDonations({ onImport }) {
       setImportResult({ message: 'Import failed', error: err.message });
     }
     setLoading(false);
+  };
+
+  const downloadFailedRows = () => {
+    if (!importResult || !importResult.details) return;
+    const notInserted = importResult.details.filter(r => r.status !== 'inserted');
+    if (notInserted.length === 0) return;
+    const exportData = notInserted.map(r => {
+      const original = lastRows.current[r.row - 1] || {};
+      return {
+        'Row #': r.row,
+        'Receipt Number': original.receipt_number || '',
+        'Phone Number': original.phone_number || '',
+        'Transaction Date': original.transaction_date || '',
+        'Instrument Number': original.instrument_number || '',
+        'Donor Name': original.donor_name || '',
+        'Amount': original.amount || '',
+        'Scheme Name': original.scheme_name || '',
+        'Mode Of Payment': original.mode_of_payment || '',
+        'Status': r.status,
+        'Reason': r.reason || 'Skipped',
+      };
+    });
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Not Inserted');
+    XLSX.writeFile(wb, 'donations_not_inserted.xlsx');
   };
 
   const downloadSample = () => {
@@ -86,7 +114,7 @@ export default function ImportDonations({ onImport }) {
 
   return (
     <div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <button
           className="bg-purple-600 text-white py-2 px-4 rounded font-semibold hover:bg-purple-700 transition"
           onClick={() => fileInputRef.current.click()}
@@ -111,32 +139,74 @@ export default function ImportDonations({ onImport }) {
       {importResult && (
         <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
           <div className="flex items-center justify-between">
-            <span className={importResult.failed ? 'text-yellow-700 font-semibold' : 'text-green-700 font-semibold'}>
+            <span className={
+              importResult.failed
+                ? 'text-red-700 font-semibold'
+                : importResult.skipped
+                ? 'text-yellow-700 font-semibold'
+                : 'text-green-700 font-semibold'
+            }>
               {importResult.message}
             </span>
-            <button onClick={() => setImportResult(null)} className="text-gray-400 hover:text-gray-700 text-lg font-bold">&times;</button>
+            <div className="flex items-center gap-2">
+              {(importResult.failed > 0 || importResult.skipped > 0) && (
+                <button
+                  onClick={downloadFailedRows}
+                  className="text-xs bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded font-semibold transition"
+                  title="Download all skipped/failed rows as Excel"
+                >
+                  Download Not-Inserted Rows
+                </button>
+              )}
+              <button onClick={() => setImportResult(null)} className="text-gray-400 hover:text-gray-700 text-lg font-bold">&times;</button>
+            </div>
           </div>
           {importResult.details && importResult.details.length > 0 && (
-            <div className="max-h-40 overflow-y-auto mt-2 text-sm">
-              <table className="min-w-full border">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="py-1 px-2 border">Row</th>
-                    <th className="py-1 px-2 border">Status</th>
-                    <th className="py-1 px-2 border">Reason</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {importResult.details.map((r, i) => (
-                    <tr key={i} className={r.status === 'failed' ? 'bg-red-100' : ''}>
-                      <td className="py-1 px-2 border">{r.row}</td>
-                      <td className="py-1 px-2 border">{r.status}</td>
-                      <td className="py-1 px-2 border">{r.reason || '-'}</td>
+            <>
+              {importResult.skipped > 0 && (
+                <div className="mt-2 text-sm text-yellow-700 font-medium">
+                  {importResult.skipped} row(s) were skipped because they are missing Receipt Number or Phone Number.
+                </div>
+              )}
+              {importResult.newDonors > 0 && (
+                <div className="mt-2 text-sm text-blue-700 font-medium">
+                  {importResult.newDonors} new donor(s) were automatically added to the Donor table.
+                </div>
+              )}
+              <div className="max-h-40 overflow-y-auto overflow-x-auto mt-2 text-sm">
+                <table className="min-w-[520px] border">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="py-1 px-2 border">Row</th>
+                      <th className="py-1 px-2 border">Status</th>
+                      <th className="py-1 px-2 border">New Donor</th>
+                      <th className="py-1 px-2 border">Reason</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {importResult.details.map((r, i) => (
+                      <tr
+                        key={i}
+                        className={
+                          r.status === 'failed'
+                            ? 'bg-red-100'
+                            : r.status === 'skipped'
+                            ? 'bg-yellow-100'
+                            : ''
+                        }
+                      >
+                        <td className="py-1 px-2 border">{r.row}</td>
+                        <td className="py-1 px-2 border capitalize">{r.status}</td>
+                        <td className="py-1 px-2 border text-center">
+                          {r.donorCreated ? <span className="text-blue-600 font-semibold">Yes</span> : '-'}
+                        </td>
+                        <td className="py-1 px-2 border">{r.reason || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       )}

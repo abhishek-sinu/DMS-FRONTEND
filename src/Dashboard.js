@@ -71,7 +71,7 @@ function Dashboard() {
 	return (
 		<DashboardLayout user={user}>
 			{/* Welcome Banner */}
-			<div className="mb-8 bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 rounded-2xl p-8 text-white relative overflow-hidden shadow-xl">
+			<div className="mb-8 bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 rounded-2xl p-5 sm:p-8 text-white relative overflow-hidden shadow-xl">
 				<div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-white/5"></div>
 				<div className="absolute -bottom-10 -left-10 w-40 h-40 rounded-full bg-white/5"></div>
 				<div className="relative z-10">
@@ -80,7 +80,7 @@ function Dashboard() {
 							{(user.username || 'U')[0].toUpperCase()}
 						</div>
 						<div>
-							<h1 className="text-2xl font-bold">Welcome back, {user.username}!</h1>
+							<h1 className="text-xl sm:text-2xl font-bold">Welcome back, {user.username}!</h1>
 							<p className="text-blue-200 text-sm">Manage donors, donations, cultivators and gifts from your dashboard.</p>
 						</div>
 					</div>
@@ -117,7 +117,7 @@ function Dashboard() {
 			) : (
 				<>
 					{/* Summary Cards */}
-					<div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
+					<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
 						<div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 p-6 flex items-center gap-4 border border-gray-100 group cursor-pointer" onClick={() => navigate('/donors')}>
 							<div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
 								<svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
@@ -194,9 +194,9 @@ function Dashboard() {
 							<svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
 							<h3 className="text-lg font-bold text-gray-800">Recent Donations</h3>
 						</div>
-						<div className="p-5">
+						<div className="p-5 overflow-x-auto">
 							{stats.recentDonations && stats.recentDonations.length > 0 ? (
-								<table className="w-full text-sm">
+								<table className="w-full min-w-[680px] text-sm">
 									<thead>
 										<tr className="text-gray-500 text-xs uppercase tracking-wider">
 											<th className="px-3 py-2 text-left">Donor</th>
@@ -229,7 +229,7 @@ function Dashboard() {
 			{/* Birthday / Anniversary Modal */}
 			{modalType && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-					<div className="bg-white rounded-2xl shadow-2xl p-0 w-full max-w-lg max-h-[80vh] overflow-hidden">
+					<div className="bg-white rounded-2xl shadow-2xl p-0 w-full max-w-lg mx-4 max-h-[80vh] overflow-hidden">
 						<div className="flex items-center justify-between px-6 py-4 border-b border-gray-100" style={{ background: modalType === 'birthdays' ? 'linear-gradient(135deg, #eff6ff, #eef2ff)' : 'linear-gradient(135deg, #fdf2f8, #fce7f3)' }}>
 							<h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
 								<span className="text-2xl">{modalType === 'birthdays' ? '🎂' : '💍'}</span>
@@ -237,7 +237,7 @@ function Dashboard() {
 							</h3>
 							<button onClick={() => setModalType(null)} className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition">&times;</button>
 						</div>
-						<div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(80vh - 70px)' }}>
+						<div className="p-4 sm:p-6 overflow-y-auto" style={{ maxHeight: 'calc(80vh - 70px)' }}>
 							{modalLoading ? (
 								<div className="flex items-center justify-center py-10">
 									<svg className="animate-spin w-8 h-8 text-blue-500" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
@@ -245,7 +245,8 @@ function Dashboard() {
 							) : modalData.length === 0 ? (
 								<div className="text-center text-gray-400 py-10">No upcoming {modalType} in the next 30 days.</div>
 							) : (
-								<table className="w-full text-sm">
+								<div className="overflow-x-auto">
+								<table className="w-full min-w-[680px] text-sm">
 									<thead>
 										<tr className="text-gray-500 text-xs uppercase tracking-wider">
 											<th className="px-3 py-2 text-left">#</th>
@@ -307,6 +308,7 @@ function Dashboard() {
 										))}
 									</tbody>
 								</table>
+								</div>
 							)}
 						</div>
 					</div>
@@ -315,12 +317,12 @@ function Dashboard() {
 
 				{detailsModalOpen && (
 					<div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-						<div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden">
+						<div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[85vh] overflow-hidden">
 							<div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-blue-50">
 								<h3 className="text-lg font-bold text-gray-800">Donor Complete Details</h3>
 								<button onClick={() => setDetailsModalOpen(false)} className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition">&times;</button>
 							</div>
-							<div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(85vh - 64px)' }}>
+							<div className="p-4 sm:p-6 overflow-y-auto" style={{ maxHeight: 'calc(85vh - 64px)' }}>
 								{detailsLoading ? (
 									<div className="text-center text-gray-500 py-8">Loading details...</div>
 								) : !donorDetails ? (
@@ -339,7 +341,8 @@ function Dashboard() {
 										<div>
 											<h4 className="text-base font-bold text-gray-800 mb-3">Family Members</h4>
 											{Array.isArray(donorDetails.family_members) && donorDetails.family_members.length > 0 ? (
-												<table className="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+												<div className="overflow-x-auto">
+												<table className="w-full min-w-[480px] text-sm border border-gray-200 rounded-lg overflow-hidden">
 													<thead className="bg-gray-50">
 														<tr>
 															<th className="px-3 py-2 text-left">Name</th>
@@ -357,6 +360,7 @@ function Dashboard() {
 														))}
 													</tbody>
 												</table>
+												</div>
 											) : (
 												<div className="text-sm text-gray-500">No family members added.</div>
 											)}

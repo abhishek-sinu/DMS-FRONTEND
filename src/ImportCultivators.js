@@ -61,7 +61,7 @@ export default function ImportCultivators({ onImport }) {
 
   return (
     <div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <button
           className="bg-purple-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-purple-700 transition"
           onClick={() => fileInputRef.current.click()}
@@ -92,8 +92,8 @@ export default function ImportCultivators({ onImport }) {
             <button onClick={() => setImportResult(null)} className="text-gray-400 hover:text-gray-700 text-lg font-bold">&times;</button>
           </div>
           {importResult.details && importResult.details.length > 0 && (
-            <div className="max-h-40 overflow-y-auto mt-2 text-sm">
-              <table className="min-w-full border">
+            <div className="max-h-40 overflow-y-auto overflow-x-auto mt-2 text-sm">
+              <table className="min-w-[520px] border">
                 <thead>
                   <tr className="bg-gray-100">
                     <th className="py-1 px-2 border">Row</th>

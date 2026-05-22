@@ -22,6 +22,7 @@ function DonorList() {
 	const [deleteLoading, setDeleteLoading] = useState(false);
 	const [pageSize, setPageSize] = useState(10);
 	const [currentPage, setCurrentPage] = useState(1);
+	const [search, setSearch] = useState('');
 
 	// Utility to format date as 'DD Month yyyy'
 	function formatDateDisplay(dateString) {
@@ -79,16 +80,27 @@ function DonorList() {
 	if (loading && initialLoad) return <div className="text-center mt-8">Loading donors...</div>;
 	if (error) return <div className="text-center mt-8 text-red-500">{error}</div>;
 
+	const filteredDonors = search
+		? donors.filter(d => ['name', 'email', 'phone', 'pan_card'].some(k => d[k] && d[k].toString().toLowerCase().includes(search.toLowerCase())))
+		: donors;
+
 	return (
 		<DashboardLayout user={null}>
-			<div className="max-w-full mx-auto mt-10 bg-white p-8 rounded-xl shadow-lg border border-gray-200" aria-labelledby="donor-list-title">
-				<div className="flex items-center justify-between mb-6">
+			<div className="max-w-full mx-auto mt-4 sm:mt-10 bg-white p-4 sm:p-8 rounded-xl shadow-lg border border-gray-200" aria-labelledby="donor-list-title">
+				<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
 					<h2 id="donor-list-title" className="text-3xl font-extrabold text-blue-700 tracking-tight">Donor List</h2>
-					<Link to="/dashboard" className="bg-blue-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition shadow">Back to Dashboard</Link>
+					<Link to="/dashboard" className="bg-blue-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition shadow text-center">Back to Dashboard</Link>
 				</div>
-				<div className="flex items-center gap-2 mb-4">
+				<div className="flex items-center gap-2 mb-4 flex-wrap">
 					<button className="bg-green-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-green-700 transition" onClick={() => setShowAdd(true)} aria-label="Add Donor">Add Donor</button>
-					<div className="ml-auto flex items-center gap-2">
+					<input
+						type="text"
+						placeholder="Search by name, email, phone, PAN..."
+						value={search}
+						onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+						className="border rounded px-3 py-2 text-sm w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-blue-300"
+					/>
+					<div className="w-full sm:w-auto sm:ml-auto flex items-center gap-2 sm:justify-end">
 						<label className="text-sm font-semibold text-gray-600">Show:</label>
 						<select
 							value={pageSize}
@@ -110,7 +122,7 @@ function DonorList() {
 				{showAdd && <DonorForm onSuccess={() => { setShowAdd(false); fetchDonors(); }} />}
 				{editDonor && <DonorEdit donor={editDonor} onSuccess={() => { setEditDonor(null); fetchDonors(); }} onCancel={() => setEditDonor(null)} />}
 				<div className="overflow-x-auto mt-6">
-					<table className="min-w-full border border-gray-300 rounded-lg shadow-sm text-sm" style={{ width: '100%' }}>
+					<table className="min-w-[980px] w-full border border-gray-300 rounded-lg shadow-sm text-sm" style={{ width: '100%' }}>
 						<thead>
 							<tr className="bg-blue-50 text-blue-900">
 								<th className="py-3 px-5 border-b font-semibold">Name</th>
@@ -126,7 +138,7 @@ function DonorList() {
 							</tr>
 						</thead>
 						<tbody>
-							{donors.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((donor, idx) => (
+							{filteredDonors.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((donor, idx) => (
 								<React.Fragment key={donor.id}>
 									<tr className="hover:bg-blue-100 transition">
 										<td className="py-3 px-5 border-b font-medium text-gray-900">{donor.name}</td>
@@ -139,7 +151,7 @@ function DonorList() {
 										<td className="py-3 px-5 border-b text-gray-700">{donor.last_gift_details || '-'}</td>
                                         
 										<td className="py-3 px-5 border-b">
-											<div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
+											<div className="flex flex-wrap gap-2 justify-center items-center">
 												<button
 													className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-sm font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
 													aria-label={`Edit donor ${donor.name}`}
@@ -156,7 +168,7 @@ function DonorList() {
 									{/* Family members row */}
 									{donor.family_members && donor.family_members.length > 0 && (
 										<tr>
-											<td colSpan={6} className="bg-gray-50 border-b px-5 py-2">
+											<td colSpan={9} className="bg-gray-50 border-b px-5 py-2">
 												<div className="text-sm text-gray-700">
 													<strong>Family Members:</strong>
 													<ul className="ml-4 mt-2">
@@ -176,19 +188,26 @@ function DonorList() {
 					</table>
 				</div>
 				{/* Pagination Controls */}
-				{donors.length > pageSize && (
-					<div className="flex items-center justify-between mt-4">
+				{filteredDonors.length > 0 && (
+					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4">
 						<span className="text-sm text-gray-600">
-							Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, donors.length)} of {donors.length}
+							Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredDonors.length)} of {filteredDonors.length}
 						</span>
-						<div className="flex gap-1">
+						<div className="flex gap-1 flex-wrap">
 							<button disabled={currentPage === 1} onClick={() => setCurrentPage(1)} className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition">First</button>
 							<button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition">Prev</button>
-							{Array.from({ length: Math.ceil(donors.length / pageSize) }, (_, i) => i + 1).map(page => (
-								<button key={page} onClick={() => setCurrentPage(page)} className={`px-3 py-1 rounded border text-sm font-semibold transition ${currentPage === page ? 'bg-blue-600 text-white' : 'hover:bg-blue-50'}`}>{page}</button>
-							))}
-							<button disabled={currentPage === Math.ceil(donors.length / pageSize)} onClick={() => setCurrentPage(p => p + 1)} className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition">Next</button>
-							<button disabled={currentPage === Math.ceil(donors.length / pageSize)} onClick={() => setCurrentPage(Math.ceil(donors.length / pageSize))} className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition">Last</button>
+							{(() => {
+								const totalPages = Math.ceil(filteredDonors.length / pageSize);
+								const windowSize = 10;
+								let start = Math.max(1, currentPage - Math.floor(windowSize / 2));
+								let end = Math.min(totalPages, start + windowSize - 1);
+								if (end - start + 1 < windowSize) start = Math.max(1, end - windowSize + 1);
+								return Array.from({ length: end - start + 1 }, (_, i) => start + i).map(page => (
+									<button key={page} onClick={() => setCurrentPage(page)} className={`px-3 py-1 rounded border text-sm font-semibold transition ${currentPage === page ? 'bg-blue-600 text-white' : 'hover:bg-blue-50'}`}>{page}</button>
+								));
+							})()}
+							<button disabled={currentPage === Math.ceil(filteredDonors.length / pageSize)} onClick={() => setCurrentPage(p => p + 1)} className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition">Next</button>
+							<button disabled={currentPage === Math.ceil(filteredDonors.length / pageSize)} onClick={() => setCurrentPage(Math.ceil(filteredDonors.length / pageSize))} className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition">Last</button>
 						</div>
 					</div>
 				)}
@@ -196,7 +215,7 @@ function DonorList() {
 		{/* Delete confirmation modal */}
 		{deleteDonorId && (
 			<div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
-				<div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md relative">
+				<div className="bg-white p-5 sm:p-8 rounded-lg shadow-lg w-full max-w-md mx-4 relative">
 					<h3 className="text-xl font-bold mb-4">Confirm Delete</h3>
 					<p className="mb-4">Are you sure you want to delete this donor?</p>
 					<p className="mb-2 text-gray-700">Type <span className="font-mono bg-gray-100 px-2 py-1 rounded">delete donor</span> to confirm:</p>

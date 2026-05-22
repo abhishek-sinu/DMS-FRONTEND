@@ -17,6 +17,7 @@ function DonationList() {
 	const [editId, setEditId] = useState(null);
 	const [pageSize, setPageSize] = useState(10);
 	const [currentPage, setCurrentPage] = useState(1);
+	const [search, setSearch] = useState('');
 
 	const fetchDonations = () => {
 		setLoading(true);
@@ -94,15 +95,26 @@ function DonationList() {
 		return <div className="text-center mt-8">Loading donations...</div>;
 	}
 
+	const filteredDonations = search
+		? donations.filter(d => ['receipt_number', 'phone_number', 'donor_name', 'scheme_name', 'mode_of_payment'].some(k => d[k] && d[k].toString().toLowerCase().includes(search.toLowerCase())))
+		: donations;
+
 	return (
 		<DashboardLayout user={null}>
-			<div className="max-w-6xl mx-auto mt-8 bg-white p-6 rounded shadow" aria-labelledby="donation-list-title">
+			<div className="max-w-6xl mx-auto mt-4 sm:mt-8 bg-white p-4 sm:p-6 rounded shadow" aria-labelledby="donation-list-title">
 				<h2 id="donation-list-title" className="text-2xl font-bold mb-4">Donation List</h2>
 				{error && <div className="text-center mb-2 text-red-500">{error}</div>}
 				{deleteSuccess && <div className="text-center mb-2 text-green-600">{deleteSuccess}</div>}
-				<div className="flex items-center gap-2 mb-4">
+				<div className="flex items-center gap-2 mb-4 flex-wrap">
 					<button className="bg-green-600 text-white py-2 px-4 rounded font-semibold hover:bg-green-700 transition" onClick={() => setShowAdd(true)} aria-label="Add Donation">Add Donation</button>
-					<div className="ml-auto flex items-center gap-2">
+					<input
+						type="text"
+						placeholder="Search by receipt no, phone, donor, scheme..."
+						value={search}
+						onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+						className="border rounded px-3 py-2 text-sm w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-blue-300"
+					/>
+					<div className="w-full sm:w-auto sm:ml-auto flex items-center gap-2 sm:justify-end">
 						<label className="text-sm font-semibold text-gray-600">Show:</label>
 						<select
 							value={pageSize}
@@ -123,7 +135,8 @@ function DonationList() {
 				</div>
 				{showAdd && <DonationForm onSuccess={() => { setShowAdd(false); fetchDonations(); }} onCancel={() => setShowAdd(false)} />}
 				{editId && <DonationEdit donationId={editId} onSuccess={() => { setEditId(null); fetchDonations(); }} onCancel={() => setEditId(null)} />}
-				<table className="min-w-full border mt-4" style={{ width: '100%' }} aria-label="Donation List Table">
+				<div className="overflow-x-auto mt-4">
+				<table className="min-w-[1050px] border w-full" style={{ width: '100%' }} aria-label="Donation List Table">
 					<thead>
 						<tr className="bg-gray-100">
 							<th className="py-2 px-4 border" scope="col">Receipt Number</th>
@@ -138,7 +151,7 @@ function DonationList() {
 						</tr>
 					</thead>
 					<tbody>
-						{donations.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((donation, idx) => (
+						{filteredDonations.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((donation, idx) => (
 							<tr key={donation.id} tabIndex={0} aria-label={`Donation row ${(currentPage - 1) * pageSize + idx + 1}`}
 								className="focus:outline-none focus:ring-2 focus:ring-blue-400">
 								<td className="py-2 px-4 border">{donation.receipt_number}</td>
@@ -167,14 +180,15 @@ function DonationList() {
 						))}
 					</tbody>
 				</table>
+				</div>
 
 				{/* Pagination Controls */}
-				{donations.length > pageSize && (
-					<div className="flex items-center justify-between mt-4">
+				{filteredDonations.length > 0 && (
+					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4">
 						<span className="text-sm text-gray-600">
-							Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, donations.length)} of {donations.length}
+							Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredDonations.length)} of {filteredDonations.length}
 						</span>
-						<div className="flex gap-1">
+						<div className="flex gap-1 flex-wrap">
 							<button
 								disabled={currentPage === 1}
 								onClick={() => setCurrentPage(1)}
@@ -185,21 +199,28 @@ function DonationList() {
 								onClick={() => setCurrentPage(p => p - 1)}
 								className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition"
 							>Prev</button>
-							{Array.from({ length: Math.ceil(donations.length / pageSize) }, (_, i) => i + 1).map(page => (
-								<button
-									key={page}
-									onClick={() => setCurrentPage(page)}
-									className={`px-3 py-1 rounded border text-sm font-semibold transition ${currentPage === page ? 'bg-blue-600 text-white' : 'hover:bg-blue-50'}`}
-								>{page}</button>
-							))}
+								{(() => {
+									const totalPages = Math.ceil(filteredDonations.length / pageSize);
+									const windowSize = 10;
+									let start = Math.max(1, currentPage - Math.floor(windowSize / 2));
+									let end = Math.min(totalPages, start + windowSize - 1);
+									if (end - start + 1 < windowSize) start = Math.max(1, end - windowSize + 1);
+									return Array.from({ length: end - start + 1 }, (_, i) => start + i).map(page => (
+										<button
+											key={page}
+											onClick={() => setCurrentPage(page)}
+											className={`px-3 py-1 rounded border text-sm font-semibold transition ${currentPage === page ? 'bg-blue-600 text-white' : 'hover:bg-blue-50'}`}
+										>{page}</button>
+									));
+								})()}
 							<button
-								disabled={currentPage === Math.ceil(donations.length / pageSize)}
+								disabled={currentPage === Math.ceil(filteredDonations.length / pageSize)}
 								onClick={() => setCurrentPage(p => p + 1)}
 								className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition"
 							>Next</button>
 							<button
-								disabled={currentPage === Math.ceil(donations.length / pageSize)}
-								onClick={() => setCurrentPage(Math.ceil(donations.length / pageSize))}
+								disabled={currentPage === Math.ceil(filteredDonations.length / pageSize)}
+								onClick={() => setCurrentPage(Math.ceil(filteredDonations.length / pageSize))}
 								className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition"
 							>Last</button>
 						</div>
@@ -209,7 +230,7 @@ function DonationList() {
 			{/* Delete Confirmation Modal */}
 			{showDeleteModal && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-					<div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md animate-fadeIn">
+					<div className="bg-white rounded-2xl shadow-2xl p-5 sm:p-8 w-full max-w-md mx-4 animate-fadeIn">
 						<h3 className="text-xl font-bold mb-4 text-center text-red-600">Confirm Deletion</h3>
 						<p className="mb-4 text-center">Type <span className="font-mono font-bold text-red-500">delete</span> to confirm deletion of this donation.</p>
 						<input

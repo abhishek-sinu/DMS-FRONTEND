@@ -1,28 +1,6 @@
 
 import React, { useState } from 'react';
 
-const modalStyle = {
-	position: 'fixed',
-	top: 0,
-	left: 0,
-	width: '100vw',
-	height: '100vh',
-	background: 'rgba(0,0,0,0.4)',
-	zIndex: 1000,
-	display: 'flex',
-	alignItems: 'center',
-	justifyContent: 'center',
-};
-
-const modalContentStyle = {
-	background: 'white',
-	borderRadius: '12px',
-	padding: '32px',
-	minWidth: '900px',
-	maxWidth: '95vw',
-	boxShadow: '0 2px 24px rgba(0,0,0,0.2)',
-};
-
 const DonationForm = ({ onSuccess, onCancel }) => {
 	const [form, setForm] = useState({
 		receipt_number: '',
@@ -69,8 +47,8 @@ const DonationForm = ({ onSuccess, onCancel }) => {
 	};
 
 	return (
-		<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-			<div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl p-8 animate-fadeIn">
+		<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-3 sm:p-4">
+			<div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl p-5 sm:p-8 animate-fadeIn max-h-[92vh] overflow-y-auto">
 				<button
 					onClick={onCancel}
 					className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none"
@@ -78,7 +56,7 @@ const DonationForm = ({ onSuccess, onCancel }) => {
 				>×</button>
 				<h2 className="text-2xl font-bold mb-6 text-center">Add Donation</h2>
 				<form onSubmit={handleSubmit}>
-					<div className="grid grid-cols-2 gap-x-8 gap-y-4">
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
 						<div>
 							<label className="block mb-1 font-semibold text-gray-700">Receipt Number</label>
 							<input name="receipt_number" value={form.receipt_number} onChange={handleChange} placeholder="Receipt Number" className="border p-2 rounded w-full focus:ring-2 focus:ring-green-400" required />
@@ -113,7 +91,7 @@ const DonationForm = ({ onSuccess, onCancel }) => {
 						</div>
 					</div>
 					{error && <div className="text-red-500 mt-2 text-center">{error}</div>}
-					<div className="flex gap-4 mt-8 justify-end">
+					<div className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-4 mt-8 sm:justify-end">
 						<button type="submit" className="bg-green-600 text-white py-2 px-6 rounded-lg font-semibold hover:bg-green-700 transition" disabled={loading}>
 							{loading ? 'Submitting...' : 'Submit'}
 						</button>

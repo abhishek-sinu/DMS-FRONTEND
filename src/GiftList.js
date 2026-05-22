@@ -18,6 +18,7 @@ function GiftList() {
 
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
+  const [search, setSearch] = useState('');
 
   const [exportError, setExportError] = useState('');
 
@@ -147,9 +148,13 @@ const handleAdd = async ({ phone, gift_name, description, value, date_given }) =
 		return <div className="text-center mt-8">Loading gifts...</div>;
 	}
 
+const filteredGifts = search
+  ? gifts.filter(g => ['phone', 'gift_name', 'description'].some(k => g[k] && g[k].toString().toLowerCase().includes(search.toLowerCase())))
+  : gifts;
+
 return (
   <DashboardLayout user={null}>
-    <div className="max-w-6xl mx-auto mt-8 bg-white p-6 rounded shadow" aria-labelledby="gift-list-title">
+    <div className="max-w-6xl mx-auto mt-4 sm:mt-8 bg-white p-4 sm:p-6 rounded shadow" aria-labelledby="gift-list-title">
       
       <h2 id="gift-list-title" className="text-2xl font-bold mb-4">Gift List</h2>
 
@@ -157,7 +162,7 @@ return (
       {deleteSuccess && <div className="text-center mb-2 text-green-600">{deleteSuccess}</div>}
 
       {/* Top Actions */}
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
         <button
           className="bg-green-600 text-white py-2 px-4 rounded font-semibold hover:bg-green-700 transition"
           onClick={() => setShowAdd(true)}
@@ -165,8 +170,15 @@ return (
         >
           Add Gift
         </button>
+        <input
+          type="text"
+          placeholder="Search by phone, gift name..."
+          value={search}
+          onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+          className="border rounded px-3 py-2 text-sm w-full sm:w-56 focus:outline-none focus:ring-2 focus:ring-blue-300"
+        />
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="w-full sm:w-auto sm:ml-auto flex items-center gap-2 sm:justify-end">
           <label className="text-sm font-semibold text-gray-600">Show:</label>
           <select
             value={pageSize}
@@ -193,7 +205,7 @@ return (
       {/* Add Gift Modal */}
       {showAdd && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
-          <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-lg relative flex flex-col" style={{ maxHeight: '90vh', minWidth: '400px', overflowY: 'auto' }}>
+          <div className="bg-white p-5 sm:p-8 rounded-lg shadow-lg w-full max-w-lg mx-3 sm:mx-4 relative flex flex-col" style={{ maxHeight: '92vh', overflowY: 'auto' }}>
             <button type="button" onClick={() => setShowAdd(false)} className="absolute top-4 right-4 px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-lg font-semibold shadow transition-all" aria-label="Close">Close</button>
             <GiftForm
               onSuccess={handleAdd}
@@ -205,7 +217,7 @@ return (
       {/* Edit Gift Modal */}
       {editGift && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
-          <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-lg relative flex flex-col" style={{ maxHeight: '90vh', minWidth: '400px', overflowY: 'auto' }}>
+          <div className="bg-white p-5 sm:p-8 rounded-lg shadow-lg w-full max-w-lg mx-3 sm:mx-4 relative flex flex-col" style={{ maxHeight: '92vh', overflowY: 'auto' }}>
             <button type="button" onClick={() => setEditGift(null)} className="absolute top-4 right-4 px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-lg font-semibold shadow transition-all" aria-label="Close">Close</button>
             <GiftEdit
               gift={editGift}
@@ -217,7 +229,8 @@ return (
       )}
 
       {/* Table */}
-      <table className="min-w-full border mt-4" style={{ width: '100%' }} aria-label="Gift List Table">
+      <div className="overflow-x-auto mt-4">
+      <table className="min-w-[760px] border w-full" style={{ width: '100%' }} aria-label="Gift List Table">
         <thead>
           <tr className="bg-gray-100">
             <th className="py-2 px-4 border">Phone</th>
@@ -229,7 +242,7 @@ return (
         </thead>
 
         <tbody>
-          {(gifts || [])
+          {(filteredGifts || [])
             .slice((currentPage - 1) * pageSize, currentPage * pageSize)
             .map((gift, idx) => (
               <tr
@@ -266,7 +279,7 @@ return (
 
                 {/* Actions */}
                 <td className="py-2 px-4 border">
-                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
+                  <div className="flex flex-wrap gap-2 justify-center items-center">
                     
                     <button
                       className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition"
@@ -289,28 +302,36 @@ return (
             ))}
         </tbody>
       </table>
+      </div>
 
       {/* Pagination */}
-      {gifts.length > pageSize && (
-        <div className="flex items-center justify-between mt-4">
+      {filteredGifts.length > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4">
           <span className="text-sm text-gray-600">
-            Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, gifts.length)} of {gifts.length}
+            Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredGifts.length)} of {filteredGifts.length}
           </span>
 
-          <div className="flex gap-1">
+          <div className="flex gap-1 flex-wrap">
             <button disabled={currentPage === 1} onClick={() => setCurrentPage(1)} className="px-3 py-1 border">First</button>
             <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-3 py-1 border">Prev</button>
 
-            {Array.from({ length: Math.ceil(gifts.length / pageSize) }, (_, i) => i + 1).map(page => (
-              <button
-                key={page}
-                onClick={() => setCurrentPage(page)}
-                className={`px-3 py-1 border ${currentPage === page ? 'bg-blue-600 text-white' : ''}`}
-              >{page}</button>
-            ))}
+            {(() => {
+              const totalPages = Math.ceil(filteredGifts.length / pageSize);
+              const windowSize = 10;
+              let start = Math.max(1, currentPage - Math.floor(windowSize / 2));
+              let end = Math.min(totalPages, start + windowSize - 1);
+              if (end - start + 1 < windowSize) start = Math.max(1, end - windowSize + 1);
+              return Array.from({ length: end - start + 1 }, (_, i) => start + i).map(page => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`px-3 py-1 border ${currentPage === page ? 'bg-blue-600 text-white' : ''}`}
+                >{page}</button>
+              ));
+            })()}
 
-            <button disabled={currentPage === Math.ceil(gifts.length / pageSize)} onClick={() => setCurrentPage(p => p + 1)} className="px-3 py-1 border">Next</button>
-            <button disabled={currentPage === Math.ceil(gifts.length / pageSize)} onClick={() => setCurrentPage(Math.ceil(gifts.length / pageSize))} className="px-3 py-1 border">Last</button>
+            <button disabled={currentPage === Math.ceil(filteredGifts.length / pageSize)} onClick={() => setCurrentPage(p => p + 1)} className="px-3 py-1 border">Next</button>
+            <button disabled={currentPage === Math.ceil(filteredGifts.length / pageSize)} onClick={() => setCurrentPage(Math.ceil(filteredGifts.length / pageSize))} className="px-3 py-1 border">Last</button>
           </div>
         </div>
       )}
@@ -319,7 +340,7 @@ return (
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           
-          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-2xl p-5 sm:p-8 w-full max-w-md mx-4 animate-fadeIn">
             
             <h3 className="text-xl font-bold mb-4 text-center text-red-600">
               Confirm Deletion

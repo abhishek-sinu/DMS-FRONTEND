@@ -215,7 +215,7 @@ function ReportList() {
             onClick={() => { setDateFrom(''); setDateTo(''); setAmountMin(''); setAmountMax(''); setScheme(''); }}
             className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded text-sm font-semibold"
           >Clear Filters</button>
-          <div className="ml-auto flex gap-2">
+          <div className="w-full sm:w-auto sm:ml-auto flex gap-2 flex-wrap sm:flex-nowrap">
             <button
               onClick={() => handleExport('xls')}
               className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-semibold text-sm"
@@ -256,7 +256,7 @@ function ReportList() {
           ) : visibleRows.length === 0 ? (
             <div className="p-8 text-center text-gray-400">No donations found for the selected filters.</div>
           ) : (
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[860px] text-sm">
               <thead>
                 <tr className="bg-blue-50 text-blue-800">
                   {reportMode === 'aggregate' ? (

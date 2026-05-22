@@ -109,16 +109,16 @@ function DonorForm({ onSuccess }) {
 
 	return (
 		<div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
-			<div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-5xl relative flex flex-col" style={{ maxHeight: '90vh', minWidth: '1100px', overflowY: 'auto' }}>
+			<div className="bg-white p-4 sm:p-8 rounded-lg shadow-lg w-full max-w-6xl mx-3 sm:mx-4 relative flex flex-col" style={{ maxHeight: '92vh', overflowY: 'auto' }}>
 				<button type="button" onClick={() => onSuccess && onSuccess()} className="absolute top-4 right-4 px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-lg font-semibold shadow transition-all" aria-label="Close">Close</button>
 				<form onSubmit={handleSubmit} className="w-full">
 					<h3 className="text-2xl font-bold mb-6">Add Donor</h3>
 					{error && <div className="text-red-500 mb-2">{error}</div>}
-					<div className="flex flex-wrap gap-8 mb-6 w-full">
+					<div className="flex flex-wrap gap-4 sm:gap-8 mb-6 w-full">
 						{/* Personal Details */}
-						<div className="flex-1 min-w-[350px] border border-gray-300 rounded-lg p-6 bg-gray-50">
+						<div className="flex-1 min-w-0 md:min-w-[320px] border border-gray-300 rounded-lg p-4 sm:p-6 bg-gray-50">
 							<h4 className="text-lg font-bold mb-4 text-blue-700">Personal Details</h4>
-							<div className="grid grid-cols-2 gap-6">
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
 								<div>
 									<label className="block mb-2 font-semibold text-gray-700">Name</label>
 									<input name="name" value={form.name} onChange={handleChange} placeholder="Name" className="border p-2 rounded w-full" required />
@@ -160,9 +160,9 @@ function DonorForm({ onSuccess }) {
 							</div>
 						</div>
 						{/* Family Details */}
-						<div className="flex-1 min-w-[450px] border border-gray-300 rounded-lg p-6 bg-gray-50 relative">
+						<div className="flex-1 min-w-0 md:min-w-[320px] border border-gray-300 rounded-lg p-4 sm:p-6 bg-gray-50 relative">
 							<h4 className="text-lg font-bold mb-4 text-pink-700">Family Details</h4>
-							<div className="grid grid-cols-2 gap-6 mb-4">
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-4">
 								<div>
 									<label className="block mb-2 font-semibold text-gray-700">Wife's Name</label>
 									<input name="name" value={wife.name} onChange={handleWifeChange} placeholder="Wife's Name" className="border p-2 rounded w-full" />
@@ -180,10 +180,10 @@ function DonorForm({ onSuccess }) {
 								<label className="block mb-2 font-semibold text-gray-700">Children</label>
 								<div className="flex flex-wrap gap-2">
 									{children.map((child, idx) => (
-										<div key={idx} className="flex items-center mb-2 gap-2 w-full">
+										<div key={idx} className="flex flex-col sm:flex-row sm:items-center mb-2 gap-2 w-full">
 											<input name="name" value={child.name} onChange={e => handleChildChange(idx, e)} placeholder="Child's Name" className="border p-2 rounded flex-1" />
 											<input name="date_of_birth" value={child.date_of_birth} onChange={e => handleChildChange(idx, e)} placeholder="DOB" className="border p-2 rounded flex-1" type="date" />
-											<div className="flex-shrink-0 flex items-center justify-center" style={{ width: '48px' }}>
+											<div className="flex-shrink-0 flex items-center justify-center sm:w-12">
 												<button type="button" onClick={() => removeChild(idx)} disabled={children.length === 1} className="p-2 rounded-full bg-gray-200 hover:bg-red-500 group flex items-center justify-center">
 													<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -197,9 +197,9 @@ function DonorForm({ onSuccess }) {
 							</div>
 						</div>
 						{/* Address Details */}
-						<div className="flex-1 min-w-[350px] border border-gray-300 rounded-lg p-6 bg-gray-50">
+						<div className="flex-1 min-w-0 md:min-w-[320px] border border-gray-300 rounded-lg p-4 sm:p-6 bg-gray-50">
 							<h4 className="text-lg font-bold mb-4 text-green-700">Address Details</h4>
-							<div className="grid grid-cols-2 gap-6">
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
 								<div>
 									<label className="block mb-2 font-semibold text-gray-700">House No.</label>
 									<input name="address_house" value={form.address_house} onChange={handleChange} placeholder="House No." className="border p-2 rounded w-full" />

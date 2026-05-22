@@ -19,6 +19,7 @@ function CultivatorList() {
   const [exportError, setExportError] = useState('');
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
+  const [search, setSearch] = useState('');
 
   const handleExport = (type) => {
     setExportError('');
@@ -133,9 +134,13 @@ function CultivatorList() {
     setDeleteLoading(false);
   };
 
+  const filteredCultivators = search
+    ? cultivators.filter(c => ['name', 'phone'].some(k => c[k] && c[k].toString().toLowerCase().includes(search.toLowerCase())))
+    : cultivators;
+
   return (
     <DashboardLayout>
-      <div className="max-w-7xl mx-auto mt-10 bg-white p-8 rounded-xl shadow-lg border border-gray-200">
+      <div className="max-w-7xl mx-auto mt-4 sm:mt-10 bg-white p-4 sm:p-8 rounded-xl shadow-lg border border-gray-200">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-3xl font-extrabold text-blue-700 tracking-tight">Cultivators</h2>
         </div>
@@ -143,7 +148,14 @@ function CultivatorList() {
           <button className="bg-green-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-green-700 transition" onClick={() => setShowAdd(true)} aria-label="Add Cultivator">Add Cultivator</button>
           <button onClick={() => handleExport('xls')} className="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg font-semibold text-sm transition">Export Excel</button>
           <button onClick={() => handleExport('pdf')} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold text-sm transition">Export PDF</button>
-          <div className="ml-auto flex items-center gap-2">
+          <input
+            type="text"
+            placeholder="Search by name or phone..."
+            value={search}
+            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+            className="border rounded px-3 py-2 text-sm w-full sm:w-56 focus:outline-none focus:ring-2 focus:ring-blue-300"
+          />
+          <div className="w-full sm:w-auto sm:ml-auto flex items-center gap-2 sm:justify-end">
             <label className="text-sm font-semibold text-gray-600">Show:</label>
             <select
               value={pageSize}
@@ -166,7 +178,7 @@ function CultivatorList() {
         {showAdd && <CultivatorForm onSuccess={handleAdd} />}
         {editCultivator && <CultivatorEdit cultivator={editCultivator} onSuccess={handleEdit} onCancel={() => setEditCultivator(null)} />}
         <div className="overflow-x-auto mt-6">
-          <table className="min-w-full border border-gray-300 rounded-lg shadow-sm text-sm" style={{ width: '100%' }}>
+          <table className="min-w-[640px] w-full border border-gray-300 rounded-lg shadow-sm text-sm" style={{ width: '100%' }}>
             <thead>
               <tr className="bg-blue-50 text-blue-900">
                 <th className="py-3 px-5 border-b font-semibold">Name</th>
@@ -175,12 +187,12 @@ function CultivatorList() {
               </tr>
             </thead>
             <tbody>
-              {cultivators.slice((currentPage - 1) * pageSize, currentPage * pageSize).map(cultivator => (
+              {filteredCultivators.slice((currentPage - 1) * pageSize, currentPage * pageSize).map(cultivator => (
                 <tr key={cultivator.id} className="hover:bg-blue-100 transition">
                   <td className="py-3 px-5 border-b font-medium text-gray-900">{cultivator.name}</td>
                   <td className="py-3 px-5 border-b text-gray-700">{cultivator.phone || '-'}</td>
                   <td className="py-3 px-5 border-b">
-                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
+                    <div className="flex flex-wrap gap-2 justify-center items-center">
                       <button
                         className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-sm font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
                         aria-label={`Edit cultivator ${cultivator.name}`}
@@ -213,19 +225,26 @@ function CultivatorList() {
           </table>
         </div>
         {/* Pagination Controls */}
-        {cultivators.length > pageSize && (
-          <div className="flex items-center justify-between mt-4">
+        {filteredCultivators.length > 0 && (
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4">
             <span className="text-sm text-gray-600">
-              Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, cultivators.length)} of {cultivators.length}
+              Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredCultivators.length)} of {filteredCultivators.length}
             </span>
-            <div className="flex gap-1">
+            <div className="flex gap-1 flex-wrap">
               <button disabled={currentPage === 1} onClick={() => setCurrentPage(1)} className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition">First</button>
               <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition">Prev</button>
-              {Array.from({ length: Math.ceil(cultivators.length / pageSize) }, (_, i) => i + 1).map(page => (
-                <button key={page} onClick={() => setCurrentPage(page)} className={`px-3 py-1 rounded border text-sm font-semibold transition ${currentPage === page ? 'bg-blue-600 text-white' : 'hover:bg-blue-50'}`}>{page}</button>
-              ))}
-              <button disabled={currentPage === Math.ceil(cultivators.length / pageSize)} onClick={() => setCurrentPage(p => p + 1)} className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition">Next</button>
-              <button disabled={currentPage === Math.ceil(cultivators.length / pageSize)} onClick={() => setCurrentPage(Math.ceil(cultivators.length / pageSize))} className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition">Last</button>
+              {(() => {
+                const totalPages = Math.ceil(filteredCultivators.length / pageSize);
+                const windowSize = 10;
+                let start = Math.max(1, currentPage - Math.floor(windowSize / 2));
+                let end = Math.min(totalPages, start + windowSize - 1);
+                if (end - start + 1 < windowSize) start = Math.max(1, end - windowSize + 1);
+                return Array.from({ length: end - start + 1 }, (_, i) => start + i).map(page => (
+                  <button key={page} onClick={() => setCurrentPage(page)} className={`px-3 py-1 rounded border text-sm font-semibold transition ${currentPage === page ? 'bg-blue-600 text-white' : 'hover:bg-blue-50'}`}>{page}</button>
+                ));
+              })()}
+              <button disabled={currentPage === Math.ceil(filteredCultivators.length / pageSize)} onClick={() => setCurrentPage(p => p + 1)} className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition">Next</button>
+              <button disabled={currentPage === Math.ceil(filteredCultivators.length / pageSize)} onClick={() => setCurrentPage(Math.ceil(filteredCultivators.length / pageSize))} className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition">Last</button>
             </div>
           </div>
         )}
