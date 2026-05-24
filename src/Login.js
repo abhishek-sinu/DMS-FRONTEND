@@ -123,11 +123,11 @@ function Login() {
 							<div className="flex-1 h-px bg-gray-200"></div>
 						</div>
 
-						{/* Sign Up Link */}
-						<div className="text-center">
+						{/* Sign Up Link — hidden */}
+						{/* <div className="text-center">
 							<span className="text-sm text-gray-500">Don't have an account?</span>
 							<Link to="/signup" className="ml-1.5 text-sm text-blue-600 font-bold hover:text-blue-800 hover:underline transition">Create Account</Link>
-						</div>
+						</div> */}
 					</div>
 
 					{/* Footer */}
