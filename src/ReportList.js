@@ -5,6 +5,13 @@ function isAuthenticated() {
   return !!localStorage.getItem('token');
 }
 
+function formatDate(dateStr) {
+  if (!dateStr) return '-';
+  const d = new Date(dateStr);
+  if (isNaN(d)) return '-';
+  return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+}
+
 function ReportList() {
   const API_URL = process.env.REACT_APP_API_URL;
   const [donations, setDonations] = useState([]);
@@ -293,8 +300,8 @@ function ReportList() {
                       <td className="px-4 py-2">{d.donor_phone || '-'}</td>
                       <td className="px-4 py-2 font-semibold text-green-700">₹{parseFloat(d.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                       <td className="px-4 py-2">{d.donation_count || 0}</td>
-                      <td className="px-4 py-2">{d.first_date ? new Date(d.first_date).toLocaleDateString('en-IN') : '-'}</td>
-                      <td className="px-4 py-2">{d.last_date ? new Date(d.last_date).toLocaleDateString('en-IN') : '-'}</td>
+                      <td className="px-4 py-2">{formatDate(d.first_date)}</td>
+                      <td className="px-4 py-2">{formatDate(d.last_date)}</td>
                       <td className="px-4 py-2">{d.cultivator_name || '-'}</td>
                       <td className="px-4 py-2">{d.scheme_names || '-'}</td>
                     </tr>
@@ -303,7 +310,7 @@ function ReportList() {
                       <td className="px-4 py-2">{i + 1}</td>
                       <td className="px-4 py-2">{d.donor_name || '-'}</td>
                       <td className="px-4 py-2 font-semibold text-green-700">₹{parseFloat(d.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                      <td className="px-4 py-2">{d.donation_date || d.transaction_date || d.created_at ? new Date(d.donation_date || d.transaction_date || d.created_at).toLocaleDateString('en-IN') : '-'}</td>
+                      <td className="px-4 py-2">{formatDate(d.donation_date || d.transaction_date || d.created_at)}</td>
                       <td className="px-4 py-2">{d.donor_phone || '-'}</td>
                       <td className="px-4 py-2">{d.cultivator_name || '-'}</td>
                       <td className="px-4 py-2">{d.scheme_name || '-'}</td>

@@ -8,6 +8,13 @@ function isAuthenticated() {
   return !!localStorage.getItem('token'); 
 }
 
+function formatDate(dateStr) {
+  if (!dateStr) return '-';
+  const d = new Date(dateStr);
+  if (isNaN(d)) return '-';
+  return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+}
+
 function GiftList() {
   const [gifts, setGifts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -272,9 +279,7 @@ return (
 
                 {/* Date */}
                 <td className="py-2 px-4 border">
-                  {gift.date_given
-                    ? new Date(gift.date_given).toLocaleDateString('en-IN')
-                    : '-'}
+                  {formatDate(gift.date_given)}
                 </td>
 
                 {/* Actions */}

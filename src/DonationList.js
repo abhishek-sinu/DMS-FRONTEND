@@ -8,6 +8,13 @@ function isAuthenticated() {
 	return !!localStorage.getItem('token');
 }
 
+function formatDate(dateStr) {
+	if (!dateStr) return '-';
+	const d = new Date(dateStr);
+	if (isNaN(d)) return '-';
+	return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+}
+
 function DonationList() {
 	const API_URL = process.env.REACT_APP_API_URL;
 	const [donations, setDonations] = useState([]);
@@ -156,7 +163,7 @@ function DonationList() {
 								className="focus:outline-none focus:ring-2 focus:ring-blue-400">
 								<td className="py-2 px-4 border">{donation.receipt_number}</td>
 								<td className="py-2 px-4 border">{donation.phone_number}</td>
-								<td className="py-2 px-4 border">{donation.transaction_date ? new Date(donation.transaction_date).toLocaleDateString('en-IN') : '-'}</td>
+								<td className="py-2 px-4 border">{formatDate(donation.transaction_date)}</td>
 								<td className="py-2 px-4 border">{donation.instrument_number}</td>
 								<td className="py-2 px-4 border">{donation.donor_name}</td>
 								<td className="py-2 px-4 border">{donation.amount}</td>

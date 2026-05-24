@@ -1,6 +1,7 @@
 import './App.css';
 import Login from './Login';
 import Signup from './Signup';
+import PWAInstallPrompt from './PWAInstallPrompt';
 import Dashboard from './Dashboard';
 import DonationList from './DonationList';
 import DonorList from './DonorList';
@@ -12,6 +13,8 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 function App() {
 	return (
+		<>
+		<PWAInstallPrompt />
 		<BrowserRouter>
 			<Routes>
 				<Route path="/" element={<Login />} />
@@ -24,6 +27,7 @@ function App() {
 				   <Route path="/gifts" element={<GiftList />} />
 			</Routes>
 		</BrowserRouter>
+		</>
 	);
 }
 

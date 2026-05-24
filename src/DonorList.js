@@ -4,6 +4,7 @@ import DonorEdit from './DonorEdit';
 import DashboardLayout from './DashboardLayout';
 import ImportDonors from './ImportDonors';
 import { Link } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 
 function isAuthenticated() {
 	return !!localStorage.getItem('token');
@@ -23,16 +24,31 @@ function DonorList() {
 	const [pageSize, setPageSize] = useState(10);
 	const [currentPage, setCurrentPage] = useState(1);
 	const [search, setSearch] = useState('');
+	const [dobFrom, setDobFrom] = useState('');
+	const [dobTo, setDobTo] = useState('');
+	const [anniversaryFrom, setAnniversaryFrom] = useState('');
+	const [anniversaryTo, setAnniversaryTo] = useState('');
+	const [exportingPdf, setExportingPdf] = useState(false);
 
-	// Utility to format date as 'DD Month yyyy'
+	// Compare month-day only (ignores year) for birthday/anniversary filters
+	// Parse month number (1-12) from "YYYY-MM" (month input) or full date string
+	function getMonthNum(dateStr) {
+		if (!dateStr) return null;
+		if (/^\d{4}-\d{2}$/.test(dateStr)) return parseInt(dateStr.split('-')[1], 10);
+		const d = new Date(dateStr);
+		if (isNaN(d)) return null;
+		return d.getMonth() + 1;
+	}
+
+	// Utility to format date as DD-MM-YYYY
 	function formatDateDisplay(dateString) {
 		if (!dateString) return '';
 		const date = new Date(dateString);
 		if (isNaN(date)) return dateString;
-		const day = date.getDate().toString().padStart(2, '0');
-		const month = date.toLocaleString('default', { month: 'long' });
+		const day = String(date.getDate()).padStart(2, '0');
+		const month = String(date.getMonth() + 1).padStart(2, '0');
 		const year = date.getFullYear();
-		return `${day} ${month} ${year}`;
+		return `${day}-${month}-${year}`;
 	}
 
 	useEffect(() => {
@@ -80,9 +96,67 @@ function DonorList() {
 	if (loading && initialLoad) return <div className="text-center mt-8">Loading donors...</div>;
 	if (error) return <div className="text-center mt-8 text-red-500">{error}</div>;
 
-	const filteredDonors = search
-		? donors.filter(d => ['name', 'email', 'phone', 'pan_card'].some(k => d[k] && d[k].toString().toLowerCase().includes(search.toLowerCase())))
-		: donors;
+	const filteredDonors = donors.filter(d => {
+		if (search && !['name', 'email', 'phone', 'pan_card'].some(k => d[k] && d[k].toString().toLowerCase().includes(search.toLowerCase()))) return false;
+		if (dobFrom || dobTo) {
+			const m = getMonthNum(d.date_of_birth);
+			if (m === null) return false;
+			if (dobFrom && m < getMonthNum(dobFrom)) return false;
+			if (dobTo && m > getMonthNum(dobTo)) return false;
+		}
+		if (anniversaryFrom || anniversaryTo) {
+			const m = getMonthNum(d.anniversary_date);
+			if (m === null) return false;
+			if (anniversaryFrom && m < getMonthNum(anniversaryFrom)) return false;
+			if (anniversaryTo && m > getMonthNum(anniversaryTo)) return false;
+		}
+		return true;
+	});
+
+	const hasFilter = dobFrom || dobTo || anniversaryFrom || anniversaryTo;
+
+	const handleExportExcel = () => {
+		const rows = filteredDonors.map(d => ({
+			'Name': d.name || '',
+			'Email': d.email || '',
+			'Phone': d.phone || '',
+			'Date of Birth': formatDateDisplay(d.date_of_birth),
+			'Anniversary': formatDateDisplay(d.anniversary_date),
+			'PAN Card': d.pan_card || '',
+			'Cultivator': d.cultivator_name || '',
+			'Address': d.address || '',
+			'City': d.city || '',
+			'State': d.state || '',
+		}));
+		const ws = XLSX.utils.json_to_sheet(rows);
+		const wb = XLSX.utils.book_new();
+		XLSX.utils.book_append_sheet(wb, ws, 'Donors');
+		XLSX.writeFile(wb, 'donors_filtered.xlsx');
+	};
+
+	const handleExportPdf = () => {
+		setExportingPdf(true);
+		const token = localStorage.getItem('token');
+		const params = new URLSearchParams();
+		if (dobFrom) params.set('dobFrom', dobFrom);
+		if (dobTo) params.set('dobTo', dobTo);
+		if (anniversaryFrom) params.set('anniversaryFrom', anniversaryFrom);
+		if (anniversaryTo) params.set('anniversaryTo', anniversaryTo);
+		if (search) params.set('search', search);
+		fetch(`${API_URL}/api/donors/export/pdf?${params.toString()}`, {
+			headers: { Authorization: `Bearer ${token}` }
+		})
+			.then(res => { if (!res.ok) throw new Error('Export failed'); return res.blob(); })
+			.then(blob => {
+				const url = window.URL.createObjectURL(blob);
+				const a = document.createElement('a');
+				a.href = url; a.download = 'donors_filtered.pdf';
+				document.body.appendChild(a); a.click(); a.remove();
+				window.URL.revokeObjectURL(url);
+			})
+			.catch(() => setError('Failed to export PDF'))
+			.finally(() => setExportingPdf(false));
+	};
 
 	return (
 		<DashboardLayout user={null}>
@@ -118,6 +192,48 @@ function DonorList() {
 				</div>
 				<div className="mb-4">
 					<ImportDonors onImport={fetchDonors} />
+				</div>
+				{/* Birthday & Anniversary Filter Panel */}
+				<div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-4 mb-4">
+					<div className="flex flex-wrap gap-4 items-end">
+						<div>
+							<label className="block text-xs font-semibold text-blue-700 mb-1">🎂 Birthday From</label>
+							<input type="month" value={dobFrom} onChange={e => { setDobFrom(e.target.value); setCurrentPage(1); }} className="border rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-300" />
+						</div>
+						<div>
+							<label className="block text-xs font-semibold text-blue-700 mb-1">🎂 Birthday To</label>
+							<input type="month" value={dobTo} onChange={e => { setDobTo(e.target.value); setCurrentPage(1); }} className="border rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-300" />
+						</div>
+						<div>
+							<label className="block text-xs font-semibold text-pink-700 mb-1">💍 Anniversary From</label>
+							<input type="month" value={anniversaryFrom} onChange={e => { setAnniversaryFrom(e.target.value); setCurrentPage(1); }} className="border rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-pink-300" />
+						</div>
+						<div>
+							<label className="block text-xs font-semibold text-pink-700 mb-1">💍 Anniversary To</label>
+							<input type="month" value={anniversaryTo} onChange={e => { setAnniversaryTo(e.target.value); setCurrentPage(1); }} className="border rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-pink-300" />
+						</div>
+						{hasFilter && (
+							<button onClick={() => { setDobFrom(''); setDobTo(''); setAnniversaryFrom(''); setAnniversaryTo(''); setCurrentPage(1); }} className="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1.5 rounded font-semibold transition mt-4">
+								✕ Clear Filters
+							</button>
+						)}
+						<div className="flex gap-2 mt-4 ml-auto">
+							<button onClick={handleExportExcel} className="bg-green-600 text-white px-4 py-1.5 rounded font-semibold text-sm hover:bg-green-700 transition flex items-center gap-1.5">
+								<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+								Excel
+							</button>
+							<button onClick={handleExportPdf} disabled={exportingPdf} className="bg-red-600 text-white px-4 py-1.5 rounded font-semibold text-sm hover:bg-red-700 transition disabled:opacity-60 flex items-center gap-1.5">
+								{exportingPdf ? (
+									<><svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Exporting...</>
+								) : (
+									<><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>PDF</>
+								)}
+							</button>
+						</div>
+					</div>
+					{hasFilter && (
+						<p className="text-xs text-blue-600 mt-2 font-medium">{filteredDonors.length} donor{filteredDonors.length !== 1 ? 's' : ''} match the current filter</p>
+					)}
 				</div>
 				{showAdd && <DonorForm onSuccess={() => { setShowAdd(false); fetchDonors(); }} />}
 				{editDonor && <DonorEdit donor={editDonor} onSuccess={() => { setEditDonor(null); fetchDonors(); }} onCancel={() => setEditDonor(null)} />}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 function formatDate(dateStr) {
 	if (!dateStr) return '';
@@ -19,6 +19,7 @@ function DonorEdit({ donor, onSuccess, onCancel }) {
 	const [error, setError] = useState('');
 	const [loading, setLoading] = useState(false);
 	const [success, setSuccess] = useState('');
+	const submittingRef = useRef(false);
 	const [cultivators, setCultivators] = useState([]);
 
 	useEffect(() => {
@@ -76,6 +77,8 @@ function DonorEdit({ donor, onSuccess, onCancel }) {
 
 	const handleSubmit = async e => {
 		e.preventDefault();
+		if (submittingRef.current) return;
+		submittingRef.current = true;
 		setLoading(true);
 		setError('');
 		setSuccess('');
@@ -148,6 +151,7 @@ function DonorEdit({ donor, onSuccess, onCancel }) {
 					});
 				}
 			}
+			submittingRef.current = false;
 			setLoading(false);
 			setSuccess('Donor updated successfully!');
 			setTimeout(() => {
@@ -156,6 +160,7 @@ function DonorEdit({ donor, onSuccess, onCancel }) {
 			}, 1500);
 		} catch (err) {
 			setError(err.message);
+			submittingRef.current = false;
 			setLoading(false);
 		}
 	};
@@ -274,8 +279,13 @@ function DonorEdit({ donor, onSuccess, onCancel }) {
 						   </div>
 					   </div>
 					   <div className="flex gap-4 flex-wrap justify-end">
-						   <button type="submit" className="bg-green-600 text-white py-2 px-6 rounded font-semibold hover:bg-green-700 transition" disabled={loading}>
-							   {loading ? 'Saving...' : 'Save Changes'}
+					   <button type="submit" className="bg-green-600 text-white py-2 px-6 rounded font-semibold hover:bg-green-700 transition disabled:opacity-60" disabled={loading}>
+						   {loading ? (
+							   <span className="flex items-center gap-2">
+								   <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+								   Saving...
+							   </span>
+						   ) : 'Save Changes'}
 						   </button>
 						   <button type="button" className="bg-gray-400 text-white py-2 px-6 rounded font-semibold hover:bg-gray-500 transition" onClick={onCancel}>Cancel</button>
 					   </div>
