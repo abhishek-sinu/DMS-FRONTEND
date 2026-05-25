@@ -43,7 +43,29 @@ export default function ImportDonations({ onImport }) {
         const mapped = {};
         for (const key of Object.keys(row)) {
           const dbCol = headerMap[key] || headerMap[key.trim()] || key.toLowerCase().replace(/\s+/g, '_');
-          if (dbCol !== 'id') mapped[dbCol] = row[key];
+          if (dbCol !== 'id') {
+            let value = row[key];
+            // Special handling for transaction_date: convert to YYYY-MM-DD for MySQL
+            if (dbCol === 'transaction_date' && value != null && value !== '') {
+              if (typeof value === 'number') {
+                // Excel serial date: epoch is 1899-12-30
+                const excelEpoch = new Date(1899, 11, 30);
+                const d = new Date(excelEpoch.getTime() + value * 24 * 60 * 60 * 1000);
+                const day = String(d.getDate()).padStart(2, '0');
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const year = d.getFullYear();
+                value = `${year}-${month}-${day}`;
+              } else if (typeof value === 'string') {
+                // Handle DD/MM/YYYY or DD-MM-YYYY → YYYY-MM-DD
+                let match = value.match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})$/);
+                if (match) {
+                  value = `${match[3]}-${match[2]}-${match[1]}`;
+                }
+                // If already YYYY-MM-DD, leave as-is
+              }
+            }
+            mapped[dbCol] = value;
+          }
         }
         return mapped;
       });
