@@ -13,7 +13,7 @@ export default function ImportDonors({ onImport }) {
     setImportResult(null);
     try {
       const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data, { type: 'array' });
+      const workbook = XLSX.read(data, { type: 'array', cellDates: true });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const rawRows = XLSX.utils.sheet_to_json(sheet);
       const headerMap = {
@@ -57,7 +57,14 @@ export default function ImportDonors({ onImport }) {
         const mapped = {};
         for (const key of Object.keys(row)) {
           const dbCol = headerMap[key] || headerMap[key.trim()] || key.toLowerCase().replace(/\s+/g, '_');
-          if (dbCol !== 'id') mapped[dbCol] = row[key];
+          if (dbCol !== 'id') {
+            let val = row[key];
+            // Convert Excel Date objects to YYYY-MM-DD strings
+            if (val instanceof Date && !isNaN(val)) {
+              val = val.toLocaleDateString('en-CA'); // produces YYYY-MM-DD
+            }
+            mapped[dbCol] = val;
+          }
         }
         return mapped;
       });
