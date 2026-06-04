@@ -67,8 +67,12 @@ function ReportList() {
       if (rowDate > to) return false;
     }
     const amt = parseFloat(d.amount) || 0;
-    if (amountMin !== '' && amt < parseFloat(amountMin)) return false;
-    if (amountMax !== '' && amt > parseFloat(amountMax)) return false;
+    // In aggregate mode the amount filter applies to each phone's total (after grouping),
+    // not to individual donations, so skip the per-row amount filter here.
+    if (reportMode !== 'aggregate') {
+      if (amountMin !== '' && amt < parseFloat(amountMin)) return false;
+      if (amountMax !== '' && amt > parseFloat(amountMax)) return false;
+    }
     if (scheme && d.scheme_name && !d.scheme_name.toLowerCase().includes(scheme.toLowerCase())) return false;
     return true;
   });
@@ -115,7 +119,12 @@ function ReportList() {
   ).map(item => ({
     ...item,
     scheme_names: Array.from(item.scheme_names).join(', ')
-  }));
+  })).filter(item => {
+    const total = parseFloat(item.amount) || 0;
+    if (amountMin !== '' && total < parseFloat(amountMin)) return false;
+    if (amountMax !== '' && total > parseFloat(amountMax)) return false;
+    return true;
+  });
 
   const visibleRows = reportMode === 'aggregate' ? aggregated : filtered;
   const totalAmount = visibleRows.reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0);
