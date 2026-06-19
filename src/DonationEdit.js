@@ -16,6 +16,17 @@ const DonationEdit = ({ donationId, onSuccess, onCancel }) => {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState('');
 	const [success, setSuccess] = useState('');
+	const [schemes, setSchemes] = useState([]);
+
+	useEffect(() => {
+		const token = localStorage.getItem('token');
+		fetch(`${API_URL}/api/schemes`, {
+			headers: token ? { Authorization: `Bearer ${token}` } : {}
+		})
+			.then(res => res.json())
+			.then(data => setSchemes(data.data || []))
+			.catch(() => setSchemes([]));
+	}, [API_URL]);
 
 	useEffect(() => {
 		if (!donationId) return;
@@ -107,7 +118,15 @@ const DonationEdit = ({ donationId, onSuccess, onCancel }) => {
 						       </div>
 						       <div>
 							       <label className="block mb-1 font-semibold text-gray-700">Scheme Name</label>
-							       <input name="scheme_name" value={form.scheme_name} onChange={handleChange} placeholder="Scheme Name" className="border p-2 rounded w-full focus:ring-2 focus:ring-blue-400" required />
+							       <select name="scheme_name" value={form.scheme_name} onChange={handleChange} className="border p-2 rounded w-full focus:ring-2 focus:ring-blue-400 bg-white" required>
+								       <option value="">Select Scheme</option>
+								       {form.scheme_name && !schemes.some(s => s.name === form.scheme_name) && (
+									       <option value={form.scheme_name}>{form.scheme_name}</option>
+								       )}
+								       {schemes.map(s => (
+									       <option key={s.id} value={s.name}>{s.name}</option>
+								       ))}
+							       </select>
 						       </div>
 						       <div>
 							       <label className="block mb-1 font-semibold text-gray-700">Mode Of Payment</label>

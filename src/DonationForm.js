@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const DonationForm = ({ onSuccess, onCancel }) => {
 	const [form, setForm] = useState({
@@ -14,6 +14,18 @@ const DonationForm = ({ onSuccess, onCancel }) => {
 	});
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState('');
+	const [schemes, setSchemes] = useState([]);
+
+	useEffect(() => {
+		const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+		const token = localStorage.getItem('token');
+		fetch(`${API_URL}/api/schemes`, {
+			headers: token ? { Authorization: `Bearer ${token}` } : {}
+		})
+			.then(res => res.json())
+			.then(data => setSchemes(data.data || []))
+			.catch(() => setSchemes([]));
+	}, []);
 
 	const handleChange = (e) => {
 		setForm({ ...form, [e.target.name]: e.target.value });
@@ -83,7 +95,12 @@ const DonationForm = ({ onSuccess, onCancel }) => {
 						</div>
 						<div>
 							<label className="block mb-1 font-semibold text-gray-700">Scheme Name</label>
-							<input name="scheme_name" value={form.scheme_name} onChange={handleChange} placeholder="Scheme Name" className="border p-2 rounded w-full focus:ring-2 focus:ring-green-400" required />
+							<select name="scheme_name" value={form.scheme_name} onChange={handleChange} className="border p-2 rounded w-full focus:ring-2 focus:ring-green-400 bg-white" required>
+								<option value="">Select Scheme</option>
+								{schemes.map(s => (
+									<option key={s.id} value={s.name}>{s.name}</option>
+								))}
+							</select>
 						</div>
 						<div>
 							<label className="block mb-1 font-semibold text-gray-700">Mode Of Payment</label>

@@ -3,6 +3,7 @@ import DonationForm from './DonationForm';
 import DonationEdit from './DonationEdit';
 import DashboardLayout from './DashboardLayout';
 import ImportDonations from './ImportDonations';
+import { downloadDonationReceipt } from './receiptTemplate';
 
 function isAuthenticated() {
 	return !!localStorage.getItem('token');
@@ -25,6 +26,8 @@ function DonationList() {
 	const [pageSize, setPageSize] = useState(10);
 	const [currentPage, setCurrentPage] = useState(1);
 	const [search, setSearch] = useState('');
+	const [donors, setDonors] = useState([]);
+	const [templeSettings, setTempleSettings] = useState(null);
 
 	const fetchDonations = () => {
 		setLoading(true);
@@ -51,6 +54,36 @@ function DonationList() {
 		}
 		fetchDonations();
 	}, []);
+
+	// Load donors once so receipts can be enriched with address & PAN (matched by phone)
+	useEffect(() => {
+		if (!isAuthenticated()) return;
+		const token = localStorage.getItem('token');
+		fetch(`${API_URL}/api/donors`, {
+			headers: { Authorization: `Bearer ${token}` }
+		})
+			.then(res => res.json())
+			.then(data => setDonors(Array.isArray(data) ? data : []))
+			.catch(() => setDonors([]));
+	}, [API_URL]);
+
+	// Load temple settings once so receipts use the saved temple details
+	useEffect(() => {
+		if (!isAuthenticated()) return;
+		const token = localStorage.getItem('token');
+		fetch(`${API_URL}/api/temple-settings`, {
+			headers: { Authorization: `Bearer ${token}` }
+		})
+			.then(res => res.json())
+			.then(data => setTempleSettings(data && data.data ? data.data : null))
+			.catch(() => setTempleSettings(null));
+	}, [API_URL]);
+
+	const handleDownloadReceipt = (donation) => {
+		const normalize = (p) => (p ? String(p).replace(/\D/g, '') : '');
+		const donor = donors.find(d => normalize(d.phone) === normalize(donation.phone_number));
+		downloadDonationReceipt(donation, donor, templeSettings);
+	};
 
 	const [deleteSuccess, setDeleteSuccess] = useState('');
 	const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -176,6 +209,11 @@ function DonationList() {
 											aria-label={`Edit donation ${donation.id}`}
 											onClick={() => setEditId(donation.id)}
 										>Edit</button>
+										<button
+											className="bg-amber-600 text-white px-3 py-1 rounded focus:outline-none focus:ring-2 focus:ring-amber-400 hover:bg-amber-700 transition"
+											aria-label={`Download receipt for donation ${donation.id}`}
+											onClick={() => handleDownloadReceipt(donation)}
+										>Receipt</button>
 										<button
 											className="bg-red-600 text-white px-3 py-1 rounded focus:outline-none focus:ring-2 focus:ring-red-400 hover:bg-red-700 transition"
 											aria-label={`Delete donation ${donation.id}`}

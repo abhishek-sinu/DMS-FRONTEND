@@ -8,6 +8,8 @@ import DonorList from './DonorList';
 import CultivatorList from './CultivatorList';
 import ReportList from './ReportList';
 import GiftList from './GiftList';
+import SchemeList from './SchemeList';
+import TempleSettings from './TempleSettings';
 
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
@@ -25,6 +27,8 @@ function App() {
                    <Route path="/cultivators" element={<CultivatorList />} />
                    <Route path="/reports" element={<ReportList />} />
 				   <Route path="/gifts" element={<GiftList />} />
+				   <Route path="/schemes" element={<SchemeList />} />
+				   <Route path="/temple-settings" element={<TempleSettings />} />
 			</Routes>
 		</BrowserRouter>
 		</>
