@@ -8,9 +8,19 @@ const DonationForm = ({ onSuccess, onCancel }) => {
 		transaction_date: '',
 		instrument_number: '',
 		donor_name: '',
+		initiated_name: '',
 		amount: '',
 		scheme_name: '',
-		mode_of_payment: ''
+		mode_of_payment: '',
+		comments: '',
+		address_line1: '',
+		address_line2: '',
+		post_office: '',
+		city: '',
+		district: '',
+		state: '',
+		pin_code: '',
+		country: ''
 	});
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState('');
@@ -90,6 +100,10 @@ const DonationForm = ({ onSuccess, onCancel }) => {
 							<input name="donor_name" value={form.donor_name} onChange={handleChange} placeholder="Donor Name" className="border p-2 rounded w-full focus:ring-2 focus:ring-green-400" required />
 						</div>
 						<div>
+							<label className="block mb-1 font-semibold text-gray-700">Initiated Name (Optional)</label>
+							<input name="initiated_name" value={form.initiated_name} onChange={handleChange} placeholder="Initiated Name" className="border p-2 rounded w-full focus:ring-2 focus:ring-green-400" />
+						</div>
+						<div>
 							<label className="block mb-1 font-semibold text-gray-700">Amount</label>
 							<input name="amount" value={form.amount} onChange={handleChange} placeholder="Amount" type="number" min="0" className="border p-2 rounded w-full focus:ring-2 focus:ring-green-400" required />
 						</div>
@@ -105,6 +119,47 @@ const DonationForm = ({ onSuccess, onCancel }) => {
 						<div>
 							<label className="block mb-1 font-semibold text-gray-700">Mode Of Payment</label>
 							<input name="mode_of_payment" value={form.mode_of_payment} onChange={handleChange} placeholder="Mode Of Payment" className="border p-2 rounded w-full focus:ring-2 focus:ring-green-400" required />
+						</div>
+					</div>
+					<div className="mt-2">
+						<label className="block mb-1 font-semibold text-gray-700">Comments</label>
+						<textarea name="comments" value={form.comments} onChange={handleChange} placeholder="Comments" rows={2} className="border p-2 rounded w-full focus:ring-2 focus:ring-green-400" />
+					</div>
+					<div className="mt-6 border-t pt-4">
+						<h3 className="text-lg font-bold mb-3 text-pink-700">Donor Address (used if donor is new)</h3>
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+							<div>
+								<label className="block mb-1 font-semibold text-gray-700">Address Line 1 (Flat / Door / Building)</label>
+								<input name="address_line1" value={form.address_line1} onChange={handleChange} placeholder="Flat / Door / Building" className="border p-2 rounded w-full focus:ring-2 focus:ring-green-400" />
+							</div>
+							<div>
+								<label className="block mb-1 font-semibold text-gray-700">Address Line 2 (Road / Street / Block / Sector)</label>
+								<input name="address_line2" value={form.address_line2} onChange={handleChange} placeholder="Road / Street / Block / Sector" className="border p-2 rounded w-full focus:ring-2 focus:ring-green-400" />
+							</div>
+							<div>
+								<label className="block mb-1 font-semibold text-gray-700">Post Office</label>
+								<input name="post_office" value={form.post_office} onChange={handleChange} placeholder="Post Office" className="border p-2 rounded w-full focus:ring-2 focus:ring-green-400" />
+							</div>
+							<div>
+								<label className="block mb-1 font-semibold text-gray-700">City (Area / Locality)</label>
+								<input name="city" value={form.city} onChange={handleChange} placeholder="City (Area / Locality)" className="border p-2 rounded w-full focus:ring-2 focus:ring-green-400" />
+							</div>
+							<div>
+								<label className="block mb-1 font-semibold text-gray-700">District</label>
+								<input name="district" value={form.district} onChange={handleChange} placeholder="District" className="border p-2 rounded w-full focus:ring-2 focus:ring-green-400" />
+							</div>
+							<div>
+								<label className="block mb-1 font-semibold text-gray-700">State</label>
+								<input name="state" value={form.state} onChange={handleChange} placeholder="State" className="border p-2 rounded w-full focus:ring-2 focus:ring-green-400" />
+							</div>
+							<div>
+								<label className="block mb-1 font-semibold text-gray-700">PIN Code (6 Digits)</label>
+								<input name="pin_code" value={form.pin_code} onChange={handleChange} placeholder="PIN Code" maxLength={6} pattern="\d{6}" className="border p-2 rounded w-full focus:ring-2 focus:ring-green-400" />
+							</div>
+							<div>
+								<label className="block mb-1 font-semibold text-gray-700">Country</label>
+								<input name="country" value={form.country} onChange={handleChange} placeholder="Country" className="border p-2 rounded w-full focus:ring-2 focus:ring-green-400" />
+							</div>
 						</div>
 					</div>
 					{error && <div className="text-red-500 mt-2 text-center">{error}</div>}

@@ -11,7 +11,8 @@ const DonationEdit = ({ donationId, onSuccess, onCancel }) => {
 		donor_name: '',
 		amount: '',
 		scheme_name: '',
-		mode_of_payment: ''
+		mode_of_payment: '',
+		comments: ''
 	});
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState('');
@@ -132,6 +133,10 @@ const DonationEdit = ({ donationId, onSuccess, onCancel }) => {
 							       <label className="block mb-1 font-semibold text-gray-700">Mode Of Payment</label>
 							       <input name="mode_of_payment" value={form.mode_of_payment} onChange={handleChange} placeholder="Mode Of Payment" className="border p-2 rounded w-full focus:ring-2 focus:ring-blue-400" required />
 						       </div>
+					       </div>
+					       <div className="mt-4">
+						       <label className="block mb-1 font-semibold text-gray-700">Comments</label>
+						       <textarea name="comments" value={form.comments || ''} onChange={handleChange} placeholder="Comments" rows={2} className="border p-2 rounded w-full focus:ring-2 focus:ring-blue-400" />
 					       </div>
 					       {error && <div className="text-red-500 mt-2 text-center">{error}</div>}
 					       {success && <div className="text-green-600 mt-2 text-center font-semibold">{success}</div>}

@@ -111,6 +111,19 @@ export function amountInWords(amount) {
 // Build a single donor address line from donor record (falls back gracefully)
 function buildAddress(donor) {
   if (!donor) return '';
+  // Prefer the new structured address format
+  const newParts = [
+    donor.address_line1,
+    donor.address_line2,
+    donor.post_office,
+    donor.city,
+    donor.district,
+    donor.state,
+    donor.pin_code,
+    donor.country,
+  ].filter(Boolean);
+  if (newParts.length) return newParts.join(' , ');
+  // Fallback to legacy address fields
   const parts = [
     donor.address_house,
     donor.address_city,

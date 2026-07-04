@@ -4,6 +4,7 @@ function DonorForm({ onSuccess }) {
 	const API_URL = process.env.REACT_APP_API_URL;
 	const [form, setForm] = useState({
 		name: '',
+		initiated_name: '',
 		email: '',
 		phone: '',
 		date_of_birth: '',
@@ -13,6 +14,14 @@ function DonorForm({ onSuccess }) {
 		address_city: '',
 		address_state: '',
 		address_pin: '',
+		address_line1: '',
+		address_line2: '',
+		post_office: '',
+		city: '',
+		district: '',
+		state: '',
+		pin_code: '',
+		country: '',
 		cultivator_id: '',
 		last_gift_details: ''
 	});
@@ -124,6 +133,10 @@ function DonorForm({ onSuccess }) {
 									<input name="name" value={form.name} onChange={handleChange} placeholder="Name" className="border p-2 rounded w-full" required />
 								</div>
 								<div>
+									<label className="block mb-2 font-semibold text-gray-700">Initiated Name (Optional)</label>
+									<input name="initiated_name" value={form.initiated_name} onChange={handleChange} placeholder="Initiated Name" className="border p-2 rounded w-full" />
+								</div>
+								<div>
 									<label className="block mb-2 font-semibold text-gray-700">Email</label>
 									<input name="email" value={form.email} onChange={handleChange} placeholder="Email" className="border p-2 rounded w-full" required type="email" />
 								</div>
@@ -201,20 +214,36 @@ function DonorForm({ onSuccess }) {
 							<h4 className="text-lg font-bold mb-4 text-green-700">Address Details</h4>
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
 								<div>
-									<label className="block mb-2 font-semibold text-gray-700">House No.</label>
-									<input name="address_house" value={form.address_house} onChange={handleChange} placeholder="House No." className="border p-2 rounded w-full" />
+									<label className="block mb-2 font-semibold text-gray-700">Address Line 1 (Flat / Door / Building)</label>
+									<input name="address_line1" value={form.address_line1} onChange={handleChange} placeholder="Flat / Door / Building" className="border p-2 rounded w-full" />
 								</div>
 								<div>
-									<label className="block mb-2 font-semibold text-gray-700">City</label>
-									<input name="address_city" value={form.address_city} onChange={handleChange} placeholder="City" className="border p-2 rounded w-full" />
+									<label className="block mb-2 font-semibold text-gray-700">Address Line 2 (Road / Street / Block / Sector)</label>
+									<input name="address_line2" value={form.address_line2} onChange={handleChange} placeholder="Road / Street / Block / Sector" className="border p-2 rounded w-full" />
+								</div>
+								<div>
+									<label className="block mb-2 font-semibold text-gray-700">Post Office</label>
+									<input name="post_office" value={form.post_office} onChange={handleChange} placeholder="Post Office" className="border p-2 rounded w-full" />
+								</div>
+								<div>
+									<label className="block mb-2 font-semibold text-gray-700">City (Area / Locality)</label>
+									<input name="city" value={form.city} onChange={handleChange} placeholder="City (Area / Locality)" className="border p-2 rounded w-full" />
+								</div>
+								<div>
+									<label className="block mb-2 font-semibold text-gray-700">District</label>
+									<input name="district" value={form.district} onChange={handleChange} placeholder="District" className="border p-2 rounded w-full" />
 								</div>
 								<div>
 									<label className="block mb-2 font-semibold text-gray-700">State</label>
-									<input name="address_state" value={form.address_state} onChange={handleChange} placeholder="State" className="border p-2 rounded w-full" />
+									<input name="state" value={form.state} onChange={handleChange} placeholder="State" className="border p-2 rounded w-full" />
 								</div>
 								<div>
-									<label className="block mb-2 font-semibold text-gray-700">Pin</label>
-									<input name="address_pin" value={form.address_pin} onChange={handleChange} placeholder="Pin" className="border p-2 rounded w-full" />
+									<label className="block mb-2 font-semibold text-gray-700">PIN Code (6 Digits)</label>
+									<input name="pin_code" value={form.pin_code} onChange={handleChange} placeholder="PIN Code" maxLength={6} pattern="\d{6}" className="border p-2 rounded w-full" />
+								</div>
+								<div>
+									<label className="block mb-2 font-semibold text-gray-700">Country</label>
+									<input name="country" value={form.country} onChange={handleChange} placeholder="Country" className="border p-2 rounded w-full" />
 								</div>
 							</div>
 						</div>
