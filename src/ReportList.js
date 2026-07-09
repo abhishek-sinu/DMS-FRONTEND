@@ -268,7 +268,14 @@ function ReportList() {
         {/* Donations Table */}
         <div className="bg-white rounded-lg shadow overflow-x-auto">
           {loading ? (
-            <div className="p-8 text-center text-gray-400">Loading...</div>
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+              <div className="relative w-16 h-16">
+                <div className="absolute inset-0 rounded-full border-4 border-blue-100"></div>
+                <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-600 animate-spin"></div>
+                <div className="absolute inset-2 rounded-full border-4 border-transparent border-t-purple-500 animate-spin" style={{ animationDuration: '0.6s', animationDirection: 'reverse' }}></div>
+              </div>
+              <p className="text-blue-700 font-semibold text-base tracking-wide animate-pulse">Loading report...</p>
+            </div>
           ) : visibleRows.length === 0 ? (
             <div className="p-8 text-center text-gray-400">No donations found for the selected filters.</div>
           ) : (

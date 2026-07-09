@@ -177,7 +177,17 @@ function CultivatorList() {
         {exportError && <div className="bg-red-100 text-red-700 px-4 py-2 rounded mb-4">{exportError}</div>}
         {showAdd && <CultivatorForm onSuccess={handleAdd} />}
         {editCultivator && <CultivatorEdit cultivator={editCultivator} onSuccess={handleEdit} onCancel={() => setEditCultivator(null)} />}
-        <div className="overflow-x-auto mt-6">
+        {loading && (
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <div className="relative w-16 h-16">
+              <div className="absolute inset-0 rounded-full border-4 border-blue-100"></div>
+              <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-600 animate-spin"></div>
+              <div className="absolute inset-2 rounded-full border-4 border-transparent border-t-purple-500 animate-spin" style={{ animationDuration: '0.6s', animationDirection: 'reverse' }}></div>
+            </div>
+            <p className="text-blue-700 font-semibold text-base tracking-wide animate-pulse">Loading cultivators...</p>
+          </div>
+        )}
+        {!loading && <div className="overflow-x-auto mt-6">
           <table className="min-w-[640px] w-full border border-gray-300 rounded-lg shadow-sm text-sm" style={{ width: '100%' }}>
             <thead>
               <tr className="bg-blue-50 text-blue-900">
@@ -223,7 +233,7 @@ function CultivatorList() {
               ))}
             </tbody>
           </table>
-        </div>
+        </div>}
         {/* Pagination Controls */}
         {filteredCultivators.length > 0 && (
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4">

@@ -131,10 +131,6 @@ function DonationList() {
 	};
 
 
-	if (loading) {
-		return <div className="text-center mt-8">Loading donations...</div>;
-	}
-
 	const filteredDonations = search
 		? donations.filter(d => ['receipt_number', 'phone_number', 'donor_name', 'scheme_name', 'mode_of_payment'].some(k => d[k] && d[k].toString().toLowerCase().includes(search.toLowerCase())))
 		: donations;
@@ -175,7 +171,17 @@ function DonationList() {
 				</div>
 				{showAdd && <DonationForm onSuccess={() => { setShowAdd(false); fetchDonations(); }} onCancel={() => setShowAdd(false)} />}
 				{editId && <DonationEdit donationId={editId} onSuccess={() => { setEditId(null); fetchDonations(); }} onCancel={() => setEditId(null)} />}
-				<div className="overflow-x-auto mt-4">
+				{loading && (
+					<div className="flex flex-col items-center justify-center py-20 gap-4">
+						<div className="relative w-16 h-16">
+							<div className="absolute inset-0 rounded-full border-4 border-blue-100"></div>
+							<div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-600 animate-spin"></div>
+							<div className="absolute inset-2 rounded-full border-4 border-transparent border-t-purple-500 animate-spin" style={{ animationDuration: '0.6s', animationDirection: 'reverse' }}></div>
+						</div>
+						<p className="text-blue-700 font-semibold text-base tracking-wide animate-pulse">Loading donations...</p>
+					</div>
+				)}
+				{!loading && <div className="overflow-x-auto mt-4">
 				<table className="min-w-[1050px] border w-full" style={{ width: '100%' }} aria-label="Donation List Table">
 					<thead>
 						<tr className="bg-gray-100">
@@ -225,7 +231,7 @@ function DonationList() {
 						))}
 					</tbody>
 				</table>
-				</div>
+				</div>}
 
 				{/* Pagination Controls */}
 				{filteredDonations.length > 0 && (

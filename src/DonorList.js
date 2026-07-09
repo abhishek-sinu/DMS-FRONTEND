@@ -93,7 +93,6 @@ function DonorList() {
 		fetchDonors();
 	};
 
-	if (loading && initialLoad) return <div className="text-center mt-8">Loading donors...</div>;
 	if (error) return <div className="text-center mt-8 text-red-500">{error}</div>;
 
 	const filteredDonors = donors.filter(d => {
@@ -237,7 +236,17 @@ function DonorList() {
 				</div>
 				{showAdd && <DonorForm onSuccess={() => { setShowAdd(false); fetchDonors(); }} />}
 				{editDonor && <DonorEdit donor={editDonor} onSuccess={() => { setEditDonor(null); fetchDonors(); }} onCancel={() => setEditDonor(null)} />}
-				<div className="overflow-x-auto mt-6">
+				{loading && (
+					<div className="flex flex-col items-center justify-center py-20 gap-4">
+						<div className="relative w-16 h-16">
+							<div className="absolute inset-0 rounded-full border-4 border-blue-100"></div>
+							<div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-600 animate-spin"></div>
+							<div className="absolute inset-2 rounded-full border-4 border-transparent border-t-purple-500 animate-spin" style={{ animationDuration: '0.6s', animationDirection: 'reverse' }}></div>
+						</div>
+						<p className="text-blue-700 font-semibold text-base tracking-wide animate-pulse">Loading donors...</p>
+					</div>
+				)}
+				{!loading && <div className="overflow-x-auto mt-6">
 					<table className="min-w-[980px] w-full border border-gray-300 rounded-lg shadow-sm text-sm" style={{ width: '100%' }}>
 						<thead>
 							<tr className="bg-blue-50 text-blue-900">
@@ -302,7 +311,7 @@ function DonorList() {
 							))}
 						</tbody>
 					</table>
-				</div>
+				</div>}
 				{/* Pagination Controls */}
 				{filteredDonors.length > 0 && (
 					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4">

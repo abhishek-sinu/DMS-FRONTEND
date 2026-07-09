@@ -124,10 +124,6 @@ function SchemeList() {
       });
   };
 
-  if (loading) {
-    return <div className="text-center mt-8">Loading schemes...</div>;
-  }
-
   const filteredSchemes = search
     ? schemes.filter(s => s.name && s.name.toLowerCase().includes(search.toLowerCase()))
     : schemes;
@@ -189,8 +185,18 @@ function SchemeList() {
           </div>
         </div>
 
+        {loading && (
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <div className="relative w-16 h-16">
+              <div className="absolute inset-0 rounded-full border-4 border-blue-100"></div>
+              <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-600 animate-spin"></div>
+              <div className="absolute inset-2 rounded-full border-4 border-transparent border-t-purple-500 animate-spin" style={{ animationDuration: '0.6s', animationDirection: 'reverse' }}></div>
+            </div>
+            <p className="text-blue-700 font-semibold text-base tracking-wide animate-pulse">Loading schemes...</p>
+          </div>
+        )}
         {/* Table */}
-        <div className="overflow-x-auto mt-4">
+        {!loading && <div className="overflow-x-auto mt-4">
           <table className="min-w-[420px] border w-full" style={{ width: '100%' }} aria-label="Scheme List Table">
             <thead>
               <tr className="bg-gray-100">
@@ -229,7 +235,7 @@ function SchemeList() {
                 ))}
             </tbody>
           </table>
-        </div>
+        </div>}
 
         {/* Pagination */}
         {filteredSchemes.length > 0 && (
