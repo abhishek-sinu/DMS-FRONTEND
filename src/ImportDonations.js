@@ -1,11 +1,14 @@
 import React, { useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
 
+const BATCH_SIZE = 500;
+
 export default function ImportDonations({ onImport }) {
   const fileInputRef = useRef();
   const lastRows = useRef([]);
   const [importResult, setImportResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [batchProgress, setBatchProgress] = useState(null);
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
@@ -70,18 +73,49 @@ export default function ImportDonations({ onImport }) {
         return mapped;
       });
       lastRows.current = rows;
-      // Send to backend
       const token = localStorage.getItem('token');
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/donations/import`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({ donations: rows })
-      });
-      const result = await res.json();
-      setImportResult(result);
+
+      // Split into batches to handle lakhs of records without hitting payload/timeout limits
+      const batches = [];
+      for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+        batches.push(rows.slice(i, i + BATCH_SIZE));
+      }
+
+      let totalInserted = 0, totalFailed = 0, totalSkipped = 0, totalNewDonors = 0;
+      const allDetails = [];
+      let rowOffset = 0;
+
+      for (let b = 0; b < batches.length; b++) {
+        setBatchProgress({ current: b + 1, total: batches.length });
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/donations/import`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({ donations: batches[b] })
+        });
+        const result = await res.json();
+        totalInserted += result.inserted || 0;
+        totalFailed += result.failed || 0;
+        totalSkipped += result.skipped || 0;
+        totalNewDonors += result.newDonors || 0;
+        if (result.details) {
+          allDetails.push(...result.details.map(d => ({ ...d, row: d.row + rowOffset })));
+        }
+        rowOffset += batches[b].length;
+      }
+
+      setBatchProgress(null);
+      const parts = [];
+      if (totalInserted > 0) parts.push(`${totalInserted} inserted`);
+      if (totalNewDonors > 0) parts.push(`${totalNewDonors} new donor(s) created`);
+      if (totalSkipped > 0) parts.push(`${totalSkipped} skipped (missing receipt/phone)`);
+      if (totalFailed > 0) parts.push(`${totalFailed} failed`);
+      const message = rows.length === 0 ? 'No rows found.' : parts.length ? parts.join(', ') + '.' : 'No rows processed.';
+
+      const aggregated = { message, inserted: totalInserted, failed: totalFailed, skipped: totalSkipped, newDonors: totalNewDonors, details: allDetails };
+      setImportResult(aggregated);
       if (onImport) onImport();
     } catch (err) {
       setImportResult({ message: 'Import failed', error: err.message });
@@ -142,7 +176,11 @@ export default function ImportDonations({ onImport }) {
           onClick={() => fileInputRef.current.click()}
           disabled={loading}
         >
-          {loading ? 'Importing...' : 'Import Donations (Excel)'}
+          {loading
+            ? batchProgress
+              ? `Importing... (${batchProgress.current}/${batchProgress.total})`
+              : 'Importing...'
+            : 'Import Donations (Excel)'}
         </button>
         <button
           className="bg-blue-500 text-white py-2 px-4 rounded font-semibold hover:bg-blue-600 transition text-sm"
