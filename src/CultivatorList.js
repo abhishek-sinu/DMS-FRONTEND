@@ -135,7 +135,10 @@ function CultivatorList() {
   };
 
   const filteredCultivators = search
-    ? cultivators.filter(c => ['name', 'phone'].some(k => c[k] && c[k].toString().toLowerCase().includes(search.toLowerCase())))
+    ? cultivators.filter(c => ['name', 'phone', 'id'].some(k => {
+        const value = k === 'id' ? c.id : c[k];
+        return value !== undefined && value !== null && value.toString().toLowerCase().includes(search.toLowerCase());
+      }))
     : cultivators;
 
   return (
@@ -190,18 +193,20 @@ function CultivatorList() {
         {!loading && <div className="overflow-x-auto mt-6">
           <table className="min-w-[640px] w-full border border-gray-300 rounded-lg shadow-sm text-sm" style={{ width: '100%' }}>
             <thead>
-              <tr className="bg-blue-50 text-blue-900">
-                <th className="py-3 px-5 border-b font-semibold">Name</th>
-                <th className="py-3 px-5 border-b font-semibold">Phone Number</th>
-                <th className="py-3 px-5 border-b font-semibold">Actions</th>
+              <tr className="bg-blue-50 text-blue-900 text-center">
+                <th className="py-3 px-5 border-b font-semibold text-center">ID</th>
+                <th className="py-3 px-5 border-b font-semibold text-center">Name</th>
+                <th className="py-3 px-5 border-b font-semibold text-center">Phone Number</th>
+                <th className="py-3 px-5 border-b font-semibold text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredCultivators.slice((currentPage - 1) * pageSize, currentPage * pageSize).map(cultivator => (
-                <tr key={cultivator.id} className="hover:bg-blue-100 transition">
-                  <td className="py-3 px-5 border-b font-medium text-gray-900">{cultivator.name}</td>
-                  <td className="py-3 px-5 border-b text-gray-700">{cultivator.phone || '-'}</td>
-                  <td className="py-3 px-5 border-b">
+                <tr key={cultivator.id} className="hover:bg-blue-100 transition text-center">
+                  <td className="py-3 px-5 border-b text-gray-700 text-center">{cultivator.id}</td>
+                  <td className="py-3 px-5 border-b font-medium text-gray-900 text-center">{cultivator.name}</td>
+                  <td className="py-3 px-5 border-b text-gray-700 text-center">{cultivator.phone || '-'}</td>
+                  <td className="py-3 px-5 border-b text-center">
                     <div className="flex flex-wrap gap-2 justify-center items-center">
                       <button
                         className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-sm font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
