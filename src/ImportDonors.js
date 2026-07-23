@@ -160,7 +160,7 @@ export default function ImportDonors({ onImport }) {
         'State': 'Maharashtra',
         'PIN Code': '400001',
         'Country': 'India',
-        'Cultivator': 'Gouranga Prabhu',
+        'cultivator_id': 1,
         'Last Gift Details': 'Photo Frame',
       },
     ];
