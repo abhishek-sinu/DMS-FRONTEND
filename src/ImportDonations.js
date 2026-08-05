@@ -87,21 +87,47 @@ export default function ImportDonations({ onImport }) {
 
       for (let b = 0; b < batches.length; b++) {
         setBatchProgress({ current: b + 1, total: batches.length });
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/donations/import`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {})
-          },
-          body: JSON.stringify({ donations: batches[b] })
-        });
-        const result = await res.json();
-        totalInserted += result.inserted || 0;
-        totalFailed += result.failed || 0;
-        totalSkipped += result.skipped || 0;
-        totalNewDonors += result.newDonors || 0;
-        if (result.details) {
-          allDetails.push(...result.details.map(d => ({ ...d, row: d.row + rowOffset })));
+        try {
+          const res = await fetch(`${process.env.REACT_APP_API_URL}/api/donations/import`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {})
+            },
+            body: JSON.stringify({ donations: batches[b] })
+          });
+
+          let result = null;
+          try {
+            result = await res.json();
+          } catch (parseErr) {
+            result = null;
+          }
+
+          if (!res.ok) {
+            const batchError = (result && (result.error || result.message)) || `Batch ${b + 1} import failed`;
+            totalFailed += batches[b].length;
+            allDetails.push(...batches[b].map((_, idx) => ({
+              row: rowOffset + idx + 1,
+              status: 'failed',
+              reason: batchError,
+            })));
+          } else {
+            totalInserted += result.inserted || 0;
+            totalFailed += result.failed || 0;
+            totalSkipped += result.skipped || 0;
+            totalNewDonors += result.newDonors || 0;
+            if (result.details) {
+              allDetails.push(...result.details.map(d => ({ ...d, row: d.row + rowOffset })));
+            }
+          }
+        } catch (batchErr) {
+          totalFailed += batches[b].length;
+          allDetails.push(...batches[b].map((_, idx) => ({
+            row: rowOffset + idx + 1,
+            status: 'failed',
+            reason: batchErr.message || 'Network error while importing batch',
+          })));
         }
         rowOffset += batches[b].length;
       }
