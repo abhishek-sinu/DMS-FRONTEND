@@ -23,6 +23,8 @@ function DonorList() {
 	const [deleteLoading, setDeleteLoading] = useState(false);
 	const [pageSize, setPageSize] = useState(10);
 	const [currentPage, setCurrentPage] = useState(1);
+	const [totalPages, setTotalPages] = useState(1);
+	const [totalRecords, setTotalRecords] = useState(0);
 	const [search, setSearch] = useState('');
 	const [dobFrom, setDobFrom] = useState('');
 	const [dobTo, setDobTo] = useState('');
@@ -58,17 +60,30 @@ function DonorList() {
 			return;
 		}
 		fetchDonors();
-	}, []);
+	}, [currentPage, pageSize, search, dobFrom, dobTo, anniversaryFrom, anniversaryTo]);
 
 	const fetchDonors = () => {
 		setLoading(true);
 		const token = localStorage.getItem('token');
-		fetch(`${API_URL}/api/donors`, {
+		const params = new URLSearchParams({
+			paginated: '1',
+			page: String(currentPage),
+			limit: String(pageSize),
+		});
+		if (search) params.set('search', search);
+		if (dobFrom) params.set('dobFrom', dobFrom);
+		if (dobTo) params.set('dobTo', dobTo);
+		if (anniversaryFrom) params.set('anniversaryFrom', anniversaryFrom);
+		if (anniversaryTo) params.set('anniversaryTo', anniversaryTo);
+
+		fetch(`${API_URL}/api/donors?${params.toString()}`, {
 			headers: { Authorization: `Bearer ${token}` }
 		})
 			.then(res => res.json())
 			.then(data => {
-				setDonors(data);
+				setDonors(Array.isArray(data?.items) ? data.items : []);
+				setTotalPages(Math.max(1, data?.pagination?.totalPages || 1));
+				setTotalRecords(data?.pagination?.total || 0);
 				setLoading(false);
 				setInitialLoad(false);
 			})
@@ -95,22 +110,7 @@ function DonorList() {
 
 	if (error) return <div className="text-center mt-8 text-red-500">{error}</div>;
 
-	const filteredDonors = donors.filter(d => {
-		if (search && !['name', 'email', 'phone', 'pan_card'].some(k => d[k] && d[k].toString().toLowerCase().includes(search.toLowerCase()))) return false;
-		if (dobFrom || dobTo) {
-			const m = getMonthNum(d.date_of_birth);
-			if (m === null) return false;
-			if (dobFrom && m < getMonthNum(dobFrom)) return false;
-			if (dobTo && m > getMonthNum(dobTo)) return false;
-		}
-		if (anniversaryFrom || anniversaryTo) {
-			const m = getMonthNum(d.anniversary_date);
-			if (m === null) return false;
-			if (anniversaryFrom && m < getMonthNum(anniversaryFrom)) return false;
-			if (anniversaryTo && m > getMonthNum(anniversaryTo)) return false;
-		}
-		return true;
-	});
+	const filteredDonors = donors;
 
 	const hasFilter = dobFrom || dobTo || anniversaryFrom || anniversaryTo;
 
@@ -184,7 +184,7 @@ function DonorList() {
 							<option value={20}>20</option>
 							<option value={30}>30</option>
 							<option value={50}>50</option>
-							<option value={donors.length}>All</option>
+							<option value={200}>200</option>
 						</select>
 						<span className="text-sm text-gray-500">per page</span>
 					</div>
@@ -231,7 +231,7 @@ function DonorList() {
 						</div>
 					</div>
 					{hasFilter && (
-						<p className="text-xs text-blue-600 mt-2 font-medium">{filteredDonors.length} donor{filteredDonors.length !== 1 ? 's' : ''} match the current filter</p>
+						<p className="text-xs text-blue-600 mt-2 font-medium">{totalRecords} donor{totalRecords !== 1 ? 's' : ''} match the current filter</p>
 					)}
 				</div>
 				{showAdd && <DonorForm onSuccess={() => { setShowAdd(false); fetchDonors(); }} />}
@@ -263,7 +263,7 @@ function DonorList() {
 							</tr>
 						</thead>
 						<tbody>
-							{filteredDonors.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((donor, idx) => (
+							{filteredDonors.map((donor, idx) => (
 								<React.Fragment key={donor.id}>
 									<tr className="hover:bg-blue-100 transition">
 										<td className="py-3 px-5 border-b font-medium text-gray-900">{donor.name}</td>
@@ -313,26 +313,26 @@ function DonorList() {
 					</table>
 				</div>}
 				{/* Pagination Controls */}
-				{filteredDonors.length > 0 && (
+				{totalRecords > 0 && (
 					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4">
 						<span className="text-sm text-gray-600">
-							Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredDonors.length)} of {filteredDonors.length}
+							Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, totalRecords)} of {totalRecords}
 						</span>
 						<div className="flex gap-1 flex-wrap">
 							<button disabled={currentPage === 1} onClick={() => setCurrentPage(1)} className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition">First</button>
 							<button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition">Prev</button>
 							{(() => {
-								const totalPages = Math.ceil(filteredDonors.length / pageSize);
+								const totalPagesLocal = totalPages;
 								const windowSize = 10;
 								let start = Math.max(1, currentPage - Math.floor(windowSize / 2));
-								let end = Math.min(totalPages, start + windowSize - 1);
+								let end = Math.min(totalPagesLocal, start + windowSize - 1);
 								if (end - start + 1 < windowSize) start = Math.max(1, end - windowSize + 1);
 								return Array.from({ length: end - start + 1 }, (_, i) => start + i).map(page => (
 									<button key={page} onClick={() => setCurrentPage(page)} className={`px-3 py-1 rounded border text-sm font-semibold transition ${currentPage === page ? 'bg-blue-600 text-white' : 'hover:bg-blue-50'}`}>{page}</button>
 								));
 							})()}
-							<button disabled={currentPage === Math.ceil(filteredDonors.length / pageSize)} onClick={() => setCurrentPage(p => p + 1)} className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition">Next</button>
-							<button disabled={currentPage === Math.ceil(filteredDonors.length / pageSize)} onClick={() => setCurrentPage(Math.ceil(filteredDonors.length / pageSize))} className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition">Last</button>
+							<button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition">Next</button>
+							<button disabled={currentPage === totalPages} onClick={() => setCurrentPage(totalPages)} className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition">Last</button>
 						</div>
 					</div>
 				)}

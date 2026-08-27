@@ -25,19 +25,30 @@ function DonationList() {
 	const [editId, setEditId] = useState(null);
 	const [pageSize, setPageSize] = useState(10);
 	const [currentPage, setCurrentPage] = useState(1);
+	const [totalPages, setTotalPages] = useState(1);
+	const [totalRecords, setTotalRecords] = useState(0);
 	const [search, setSearch] = useState('');
-	const [donors, setDonors] = useState([]);
+	const [donorCache, setDonorCache] = useState({});
 	const [templeSettings, setTempleSettings] = useState(null);
 
 	const fetchDonations = () => {
 		setLoading(true);
 		const token = localStorage.getItem('token');
-		fetch(`${API_URL}/api/donations`, {
+		const params = new URLSearchParams({
+			paginated: '1',
+			page: String(currentPage),
+			limit: String(pageSize),
+		});
+		if (search) params.set('search', search);
+
+		fetch(`${API_URL}/api/donations?${params.toString()}`, {
 			headers: { Authorization: `Bearer ${token}` }
 		})
 			.then(res => res.json())
 			.then(data => {
-				setDonations(data);
+				setDonations(Array.isArray(data?.items) ? data.items : []);
+				setTotalPages(Math.max(1, data?.pagination?.totalPages || 1));
+				setTotalRecords(data?.pagination?.total || 0);
 				setLoading(false);
 			})
 			.catch(err => {
@@ -53,19 +64,7 @@ function DonationList() {
 			return;
 		}
 		fetchDonations();
-	}, []);
-
-	// Load donors once so receipts can be enriched with address & PAN (matched by phone)
-	useEffect(() => {
-		if (!isAuthenticated()) return;
-		const token = localStorage.getItem('token');
-		fetch(`${API_URL}/api/donors`, {
-			headers: { Authorization: `Bearer ${token}` }
-		})
-			.then(res => res.json())
-			.then(data => setDonors(Array.isArray(data) ? data : []))
-			.catch(() => setDonors([]));
-	}, [API_URL]);
+	}, [currentPage, pageSize, search]);
 
 	// Load temple settings once so receipts use the saved temple details
 	useEffect(() => {
@@ -79,9 +78,24 @@ function DonationList() {
 			.catch(() => setTempleSettings(null));
 	}, [API_URL]);
 
-	const handleDownloadReceipt = (donation) => {
+	const handleDownloadReceipt = async (donation) => {
 		const normalize = (p) => (p ? String(p).replace(/\D/g, '') : '');
-		const donor = donors.find(d => normalize(d.phone) === normalize(donation.phone_number));
+		const phoneKey = normalize(donation.phone_number);
+		let donor = donorCache[phoneKey] || null;
+		if (!donor && phoneKey) {
+			const token = localStorage.getItem('token');
+			try {
+				const res = await fetch(`${API_URL}/api/donors/by-phone/${encodeURIComponent(phoneKey)}`, {
+					headers: { Authorization: `Bearer ${token}` }
+				});
+				if (res.ok) {
+					donor = await res.json();
+					setDonorCache(prev => ({ ...prev, [phoneKey]: donor }));
+				}
+			} catch (_) {
+				donor = null;
+			}
+		}
 		downloadDonationReceipt(donation, donor, templeSettings);
 	};
 
@@ -131,9 +145,7 @@ function DonationList() {
 	};
 
 
-	const filteredDonations = search
-		? donations.filter(d => ['receipt_number', 'phone_number', 'donor_name', 'scheme_name', 'mode_of_payment'].some(k => d[k] && d[k].toString().toLowerCase().includes(search.toLowerCase())))
-		: donations;
+	const filteredDonations = donations;
 
 	return (
 		<DashboardLayout user={null}>
@@ -161,7 +173,7 @@ function DonationList() {
 							<option value={20}>20</option>
 							<option value={30}>30</option>
 							<option value={50}>50</option>
-							<option value={donations.length}>All</option>
+							<option value={200}>200</option>
 						</select>
 						<span className="text-sm text-gray-500">per page</span>
 					</div>
@@ -197,7 +209,7 @@ function DonationList() {
 						</tr>
 					</thead>
 					<tbody>
-						{filteredDonations.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((donation, idx) => (
+						{filteredDonations.map((donation, idx) => (
 							<tr key={donation.id} tabIndex={0} aria-label={`Donation row ${(currentPage - 1) * pageSize + idx + 1}`}
 								className="focus:outline-none focus:ring-2 focus:ring-blue-400">
 								<td className="py-2 px-4 border">{donation.receipt_number}</td>
@@ -234,10 +246,10 @@ function DonationList() {
 				</div>}
 
 				{/* Pagination Controls */}
-				{filteredDonations.length > 0 && (
+				{totalRecords > 0 && (
 					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4">
 						<span className="text-sm text-gray-600">
-							Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredDonations.length)} of {filteredDonations.length}
+							Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, totalRecords)} of {totalRecords}
 						</span>
 						<div className="flex gap-1 flex-wrap">
 							<button
@@ -251,10 +263,10 @@ function DonationList() {
 								className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition"
 							>Prev</button>
 								{(() => {
-									const totalPages = Math.ceil(filteredDonations.length / pageSize);
+									const totalPagesLocal = totalPages;
 									const windowSize = 10;
 									let start = Math.max(1, currentPage - Math.floor(windowSize / 2));
-									let end = Math.min(totalPages, start + windowSize - 1);
+									let end = Math.min(totalPagesLocal, start + windowSize - 1);
 									if (end - start + 1 < windowSize) start = Math.max(1, end - windowSize + 1);
 									return Array.from({ length: end - start + 1 }, (_, i) => start + i).map(page => (
 										<button
@@ -265,13 +277,13 @@ function DonationList() {
 									));
 								})()}
 							<button
-								disabled={currentPage === Math.ceil(filteredDonations.length / pageSize)}
+								disabled={currentPage === totalPages}
 								onClick={() => setCurrentPage(p => p + 1)}
 								className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition"
 							>Next</button>
 							<button
-								disabled={currentPage === Math.ceil(filteredDonations.length / pageSize)}
-								onClick={() => setCurrentPage(Math.ceil(filteredDonations.length / pageSize))}
+								disabled={currentPage === totalPages}
+								onClick={() => setCurrentPage(totalPages)}
 								className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition"
 							>Last</button>
 						</div>

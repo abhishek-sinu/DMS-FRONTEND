@@ -23,6 +23,10 @@ function ReportList() {
   const [amountMax, setAmountMax] = useState('');
   const [scheme, setScheme] = useState('');
   const [reportMode, setReportMode] = useState('individual');
+  const [pageSize, setPageSize] = useState(20);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -30,18 +34,31 @@ function ReportList() {
       setLoading(false);
       return;
     }
-    fetchDonations();
-  }, []);
+    fetchReportData();
+  }, [dateFrom, dateTo, amountMin, amountMax, scheme, reportMode, currentPage, pageSize]);
 
-  const fetchDonations = () => {
+  const fetchReportData = () => {
     setLoading(true);
     const token = localStorage.getItem('token');
-    fetch(`${API_URL}/api/donations`, {
+    const params = new URLSearchParams({
+      mode: reportMode,
+      page: String(currentPage),
+      limit: String(pageSize)
+    });
+    if (dateFrom) params.set('dateFrom', dateFrom);
+    if (dateTo) params.set('dateTo', dateTo);
+    if (amountMin !== '') params.set('amountMin', amountMin);
+    if (amountMax !== '') params.set('amountMax', amountMax);
+    if (scheme) params.set('scheme', scheme);
+
+    fetch(`${API_URL}/api/report/donations?${params.toString()}`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())
       .then(data => {
-        setDonations(Array.isArray(data) ? data : []);
+        setDonations(Array.isArray(data?.items) ? data.items : []);
+        setTotalPages(Math.max(1, data?.pagination?.totalPages || 1));
+        setTotalRecords(data?.pagination?.total || 0);
         setLoading(false);
       })
       .catch(() => {
@@ -49,84 +66,7 @@ function ReportList() {
         setLoading(false);
       });
   };
-
-  const filtered = donations.filter(d => {
-    const raw = d.transaction_date || d.donation_date || d.created_at;
-    if (!raw) return true;
-    const rowDate = new Date(raw);
-    if (isNaN(rowDate)) return true;
-    rowDate.setHours(0, 0, 0, 0);
-    if (dateFrom) {
-      const from = new Date(dateFrom);
-      from.setHours(0, 0, 0, 0);
-      if (rowDate < from) return false;
-    }
-    if (dateTo) {
-      const to = new Date(dateTo);
-      to.setHours(23, 59, 59, 999);
-      if (rowDate > to) return false;
-    }
-    const amt = parseFloat(d.amount) || 0;
-    // In aggregate mode the amount filter applies to each phone's total (after grouping),
-    // not to individual donations, so skip the per-row amount filter here.
-    if (reportMode !== 'aggregate') {
-      if (amountMin !== '' && amt < parseFloat(amountMin)) return false;
-      if (amountMax !== '' && amt > parseFloat(amountMax)) return false;
-    }
-    if (scheme && d.scheme_name && !d.scheme_name.toLowerCase().includes(scheme.toLowerCase())) return false;
-    return true;
-  });
-
-  const aggregated = Object.values(
-    filtered.reduce((acc, d) => {
-      const donorPhone = d.donor_phone || d.phone_number || '';
-      const donorName = d.donor_name || '-';
-      const key = donorPhone || `NO_PHONE_${donorName}`;
-      const amount = parseFloat(d.amount) || 0;
-      const dateValue = d.donation_date || d.transaction_date || d.created_at || null;
-
-      if (!acc[key]) {
-        acc[key] = {
-          id: key,
-          donor_name: donorName,
-          donor_phone: donorPhone || '-',
-          cultivator_name: d.cultivator_name || '-',
-          amount: 0,
-          donation_count: 0,
-          scheme_names: new Set(),
-          first_date: dateValue,
-          last_date: dateValue
-        };
-      }
-
-      acc[key].amount += amount;
-      acc[key].donation_count += 1;
-      if (d.scheme_name) acc[key].scheme_names.add(d.scheme_name);
-      if (dateValue) {
-        if (!acc[key].first_date || new Date(dateValue) < new Date(acc[key].first_date)) {
-          acc[key].first_date = dateValue;
-        }
-        if (!acc[key].last_date || new Date(dateValue) > new Date(acc[key].last_date)) {
-          acc[key].last_date = dateValue;
-        }
-      }
-      if ((!acc[key].cultivator_name || acc[key].cultivator_name === '-') && d.cultivator_name) {
-        acc[key].cultivator_name = d.cultivator_name;
-      }
-
-      return acc;
-    }, {})
-  ).map(item => ({
-    ...item,
-    scheme_names: Array.from(item.scheme_names).join(', ')
-  })).filter(item => {
-    const total = parseFloat(item.amount) || 0;
-    if (amountMin !== '' && total < parseFloat(amountMin)) return false;
-    if (amountMax !== '' && total > parseFloat(amountMax)) return false;
-    return true;
-  });
-
-  const visibleRows = reportMode === 'aggregate' ? aggregated : filtered;
+  const visibleRows = donations;
   const totalAmount = visibleRows.reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0);
 
   const handleExport = (type) => {
@@ -172,7 +112,7 @@ function ReportList() {
             <label className="block text-sm font-semibold text-gray-600 mb-1">Mode</label>
             <select
               value={reportMode}
-              onChange={e => setReportMode(e.target.value)}
+              onChange={e => { setReportMode(e.target.value); setCurrentPage(1); }}
               className="border rounded px-3 py-2 text-sm"
             >
               <option value="individual">Individual Donations</option>
@@ -184,7 +124,7 @@ function ReportList() {
             <input
               type="date"
               value={dateFrom}
-              onChange={e => setDateFrom(e.target.value)}
+              onChange={e => { setDateFrom(e.target.value); setCurrentPage(1); }}
               className="border rounded px-3 py-2 text-sm"
             />
           </div>
@@ -193,7 +133,7 @@ function ReportList() {
             <input
               type="date"
               value={dateTo}
-              onChange={e => setDateTo(e.target.value)}
+              onChange={e => { setDateTo(e.target.value); setCurrentPage(1); }}
               className="border rounded px-3 py-2 text-sm"
             />
           </div>
@@ -202,7 +142,7 @@ function ReportList() {
             <input
               type="number"
               value={amountMin}
-              onChange={e => setAmountMin(e.target.value)}
+              onChange={e => { setAmountMin(e.target.value); setCurrentPage(1); }}
               className="border rounded px-3 py-2 text-sm w-28"
               placeholder="₹ Min"
             />
@@ -212,7 +152,7 @@ function ReportList() {
             <input
               type="number"
               value={amountMax}
-              onChange={e => setAmountMax(e.target.value)}
+              onChange={e => { setAmountMax(e.target.value); setCurrentPage(1); }}
               className="border rounded px-3 py-2 text-sm w-28"
               placeholder="₹ Max"
             />
@@ -222,15 +162,28 @@ function ReportList() {
             <input
               type="text"
               value={scheme}
-              onChange={e => setScheme(e.target.value)}
+              onChange={e => { setScheme(e.target.value); setCurrentPage(1); }}
               className="border rounded px-3 py-2 text-sm w-32"
               placeholder="Scheme name"
             />
           </div>
           <button
-            onClick={() => { setDateFrom(''); setDateTo(''); setAmountMin(''); setAmountMax(''); setScheme(''); }}
+            onClick={() => { setDateFrom(''); setDateTo(''); setAmountMin(''); setAmountMax(''); setScheme(''); setCurrentPage(1); }}
             className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded text-sm font-semibold"
           >Clear Filters</button>
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-semibold text-gray-600">Show:</label>
+            <select
+              value={pageSize}
+              onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+              className="border rounded px-2 py-1 text-sm"
+            >
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+              <option value={200}>200</option>
+            </select>
+          </div>
           <div className="w-full sm:w-auto sm:ml-auto flex gap-2 flex-wrap sm:flex-nowrap">
             <button
               onClick={() => handleExport('xls')}
@@ -249,15 +202,15 @@ function ReportList() {
             <div className="text-sm text-gray-500 font-semibold">
               {reportMode === 'aggregate' ? 'Total Phones' : 'Total Donations'}
             </div>
-            <div className="text-2xl font-bold text-blue-700">{visibleRows.length}</div>
+            <div className="text-2xl font-bold text-blue-700">{totalRecords}</div>
           </div>
           <div className="bg-white rounded-lg shadow p-4 text-center">
-            <div className="text-sm text-gray-500 font-semibold">Total Amount</div>
+            <div className="text-sm text-gray-500 font-semibold">Page Amount</div>
             <div className="text-2xl font-bold text-green-700">₹{totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
           </div>
           <div className="bg-white rounded-lg shadow p-4 text-center">
             <div className="text-sm text-gray-500 font-semibold">
-              {reportMode === 'aggregate' ? 'Average Per Phone' : 'Average Donation'}
+              {reportMode === 'aggregate' ? 'Page Avg Per Phone' : 'Page Average Donation'}
             </div>
             <div className="text-2xl font-bold text-purple-700">
               ₹{visibleRows.length ? (totalAmount / visibleRows.length).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '0.00'}
@@ -337,6 +290,29 @@ function ReportList() {
             </table>
           )}
         </div>
+
+        {totalRecords > 0 && (
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4">
+            <span className="text-sm text-gray-600">
+              Showing {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, totalRecords)} of {totalRecords}
+            </span>
+            <div className="flex gap-1 flex-wrap">
+              <button disabled={currentPage === 1} onClick={() => setCurrentPage(1)} className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition">First</button>
+              <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition">Prev</button>
+              {(() => {
+                const windowSize = 10;
+                let start = Math.max(1, currentPage - Math.floor(windowSize / 2));
+                let end = Math.min(totalPages, start + windowSize - 1);
+                if (end - start + 1 < windowSize) start = Math.max(1, end - windowSize + 1);
+                return Array.from({ length: end - start + 1 }, (_, i) => start + i).map(page => (
+                  <button key={page} onClick={() => setCurrentPage(page)} className={`px-3 py-1 rounded border text-sm font-semibold transition ${currentPage === page ? 'bg-blue-600 text-white' : 'hover:bg-blue-50'}`}>{page}</button>
+                ));
+              })()}
+              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition">Next</button>
+              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(totalPages)} className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition">Last</button>
+            </div>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );
