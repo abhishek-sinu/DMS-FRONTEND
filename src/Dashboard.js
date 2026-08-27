@@ -51,6 +51,10 @@ function Dashboard() {
 			try {
 				const payload = JSON.parse(atob(token.split('.')[1]));
 				setUser(payload);
+				if (Number(payload.role_id) === 3) {
+					navigate('/donors', { replace: true });
+					return;
+				}
 			} catch {
 				setUser(null);
 			}
@@ -58,7 +62,10 @@ function Dashboard() {
 			fetch(`${API_URL}/api/dashboard/stats`, {
 				headers: { Authorization: `Bearer ${token}` }
 			})
-				.then(res => res.json())
+				.then(res => {
+					if (!res.ok) throw new Error('Failed to fetch dashboard stats');
+					return res.json();
+				})
 				.then(data => { setStats(data); setLoading(false); })
 				.catch(() => setLoading(false));
 		} else {
