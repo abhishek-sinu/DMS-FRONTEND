@@ -52,9 +52,13 @@ function DashboardLayout({ children, user }) {
     )},
   ];
 
+  const visibleLinks = Number(currentUser?.role_id) === 3
+    ? links.filter(link => ['/donors', '/donations', '/gifts', '/reports'].includes(link.to))
+    : links;
+
   const renderNavLinks = (collapsed, onNavigate) => (
     <ul className="space-y-1">
-      {links.map(link => {
+      {visibleLinks.map(link => {
         const isActive = location.pathname === link.to;
         return (
           <li key={link.to}>
