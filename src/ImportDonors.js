@@ -97,7 +97,7 @@ export default function ImportDonors({ onImport }) {
         batches.push(rows.slice(i, i + BATCH_SIZE));
       }
 
-      let totalInserted = 0, totalFailed = 0, totalSkipped = 0;
+      let totalInserted = 0, totalFailed = 0, totalUpdated = 0;
       const allDetails = [];
       let rowOffset = 0;
 
@@ -115,7 +115,7 @@ export default function ImportDonors({ onImport }) {
         const result = await res.json();
         totalInserted += result.inserted || 0;
         totalFailed += result.failed || 0;
-        totalSkipped += result.skipped || 0;
+        totalUpdated += result.updated || 0;
         if (result.details) {
           allDetails.push(...result.details.map(d => ({ ...d, row: d.row + rowOffset })));
         }
@@ -124,13 +124,13 @@ export default function ImportDonors({ onImport }) {
 
       setBatchProgress(null);
       const parts = [`${totalInserted} inserted`];
-      if (totalSkipped > 0) parts.push(`${totalSkipped} skipped (duplicates)`);
+      if (totalUpdated > 0) parts.push(`${totalUpdated} updated (existing phone match)`);
       if (totalFailed > 0) parts.push(`${totalFailed} failed`);
       const message = rows.length === 0 ? 'No rows found.' :
         totalInserted === rows.length ? 'All rows inserted successfully.' :
         parts.join(', ') + '.';
 
-      const aggregated = { message, inserted: totalInserted, failed: totalFailed, skipped: totalSkipped, details: allDetails };
+      const aggregated = { message, inserted: totalInserted, failed: totalFailed, updated: totalUpdated, details: allDetails };
       console.log('--- ImportDonors: Aggregated result ---', aggregated);
       setImportResult(aggregated);
       if (onImport) onImport();
@@ -201,16 +201,16 @@ export default function ImportDonors({ onImport }) {
       {importResult && (
         <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
           <div className="flex items-center justify-between">
-            <span className={(importResult.failed || importResult.skipped) ? 'text-yellow-700 font-semibold' : 'text-green-700 font-semibold'}>
+            <span className={(importResult.failed || importResult.updated) ? 'text-yellow-700 font-semibold' : 'text-green-700 font-semibold'}>
               {importResult.message}
             </span>
             <button onClick={() => setImportResult(null)} className="text-gray-400 hover:text-gray-700 text-lg font-bold">&times;</button>
           </div>
-          {importResult.details && importResult.details.filter(r => r.status === 'skipped' || r.status === 'failed').length > 0 && (
+          {importResult.details && importResult.details.filter(r => r.status === 'updated' || r.status === 'failed').length > 0 && (
             <div className="mt-2">
-              {importResult.details.filter(r => r.status === 'skipped').length > 0 && (
-                <div className="mb-2 p-2 bg-yellow-50 border border-yellow-300 rounded text-yellow-800 text-sm font-semibold">
-                  Duplicates skipped: {importResult.details.filter(r => r.status === 'skipped').map(r => `Row ${r.row} — ${r.reason}`).join('; ')}
+              {importResult.details.filter(r => r.status === 'updated').length > 0 && (
+                <div className="mb-2 p-2 bg-blue-50 border border-blue-300 rounded text-blue-800 text-sm font-semibold">
+                  Existing donors updated (matched by phone): Row {importResult.details.filter(r => r.status === 'updated').map(r => r.row).join(', ')}
                 </div>
               )}
               {importResult.details.filter(r => r.status === 'failed').length > 0 && (

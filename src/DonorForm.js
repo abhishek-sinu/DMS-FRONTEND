@@ -78,8 +78,11 @@ function DonorForm({ onSuccess }) {
 			});
 			if (!res.ok) {
 				const data = await res.json().catch(() => null);
-				if (res.status === 409 && data && data.error) {
+				if (data && data.error) {
 					throw new Error(data.error);
+				}
+				if (data && Array.isArray(data.errors) && data.errors.length) {
+					throw new Error(data.errors.map(e => e.msg).join(', '));
 				}
 				throw new Error('Failed to add donor');
 			}
@@ -138,7 +141,7 @@ function DonorForm({ onSuccess }) {
 								</div>
 								<div>
 									<label className="block mb-2 font-semibold text-gray-700">Email</label>
-									<input name="email" value={form.email} onChange={handleChange} placeholder="Email" className="border p-2 rounded w-full" required type="email" />
+									<input name="email" value={form.email} onChange={handleChange} placeholder="Email" className="border p-2 rounded w-full" type="email" />
 								</div>
 								<div>
 									<label className="block mb-2 font-semibold text-gray-700">Phone</label>
@@ -146,7 +149,7 @@ function DonorForm({ onSuccess }) {
 								</div>
 								<div>
 									<label className="block mb-2 font-semibold text-gray-700">Date of Birth</label>
-									<input name="date_of_birth" value={form.date_of_birth} onChange={handleChange} className="border p-2 rounded w-full" required type="date" />
+									<input name="date_of_birth" value={form.date_of_birth} onChange={handleChange} className="border p-2 rounded w-full" type="date" />
 								</div>
 								<div>
 									<label className="block mb-2 font-semibold text-gray-700">PAN Card</label>
@@ -159,6 +162,7 @@ function DonorForm({ onSuccess }) {
 										value={form.cultivator_id || ''}
 										onChange={handleChange}
 										className="border p-2 rounded w-full"
+										required
 									>
 										<option value="">Select Cultivator</option>
 										{cultivators.map(c => (
