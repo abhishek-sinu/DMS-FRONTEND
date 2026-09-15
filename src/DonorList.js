@@ -31,6 +31,7 @@ function DonorList() {
 	const [anniversaryFrom, setAnniversaryFrom] = useState('');
 	const [anniversaryTo, setAnniversaryTo] = useState('');
 	const [exportingPdf, setExportingPdf] = useState(false);
+	const [exportingAllExcel, setExportingAllExcel] = useState(false);
 
 	// Compare month-day only (ignores year) for birthday/anniversary filters
 	// Parse month number (1-12) from "YYYY-MM" (month input) or full date string
@@ -133,15 +134,45 @@ function DonorList() {
 		XLSX.writeFile(wb, 'donors_filtered.xlsx');
 	};
 
-	const handleExportPdf = () => {
-		setExportingPdf(true);
-		const token = localStorage.getItem('token');
+	const buildExportParams = () => {
 		const params = new URLSearchParams();
 		if (dobFrom) params.set('dobFrom', dobFrom);
 		if (dobTo) params.set('dobTo', dobTo);
 		if (anniversaryFrom) params.set('anniversaryFrom', anniversaryFrom);
 		if (anniversaryTo) params.set('anniversaryTo', anniversaryTo);
 		if (search) params.set('search', search);
+		return params;
+	};
+
+	const handleExportAllExcel = () => {
+		setExportingAllExcel(true);
+		const token = localStorage.getItem('token');
+		const params = buildExportParams();
+		fetch(`${API_URL}/api/donors/export/xls?${params.toString()}`, {
+			headers: { Authorization: `Bearer ${token}` }
+		})
+			.then(res => {
+				if (!res.ok) throw new Error('Export failed');
+				return res.blob();
+			})
+			.then(blob => {
+				const url = window.URL.createObjectURL(blob);
+				const a = document.createElement('a');
+				a.href = url;
+				a.download = 'all_donors.xlsx';
+				document.body.appendChild(a);
+				a.click();
+				a.remove();
+				window.URL.revokeObjectURL(url);
+			})
+			.catch(() => setError('Failed to export all donors as Excel'))
+			.finally(() => setExportingAllExcel(false));
+	};
+
+	const handleExportPdf = () => {
+		setExportingPdf(true);
+		const token = localStorage.getItem('token');
+		const params = buildExportParams();
 		fetch(`${API_URL}/api/donors/export/pdf?${params.toString()}`, {
 			headers: { Authorization: `Bearer ${token}` }
 		})
@@ -219,7 +250,14 @@ function DonorList() {
 						<div className="flex gap-2 mt-4 ml-auto">
 							<button onClick={handleExportExcel} className="bg-green-600 text-white px-4 py-1.5 rounded font-semibold text-sm hover:bg-green-700 transition flex items-center gap-1.5">
 								<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-								Excel
+								Export Page
+							</button>
+							<button onClick={handleExportAllExcel} disabled={exportingAllExcel} className="bg-green-700 text-white px-4 py-1.5 rounded font-semibold text-sm hover:bg-green-800 transition disabled:opacity-60 flex items-center gap-1.5">
+								{exportingAllExcel ? (
+									<><svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Exporting...</>
+								) : (
+									<><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>Export All</>
+								)}
 							</button>
 							<button onClick={handleExportPdf} disabled={exportingPdf} className="bg-red-600 text-white px-4 py-1.5 rounded font-semibold text-sm hover:bg-red-700 transition disabled:opacity-60 flex items-center gap-1.5">
 								{exportingPdf ? (
