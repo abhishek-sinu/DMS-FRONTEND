@@ -10,7 +10,7 @@ function formatDate(dateStr) {
 }
 
 function Dashboard() {
-	const API_URL = process.env.REACT_APP_API_URL;
+	const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 	const navigate = useNavigate();
 	const [user, setUser] = useState(null);
 	const [stats, setStats] = useState(null);

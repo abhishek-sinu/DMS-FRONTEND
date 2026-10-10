@@ -8,7 +8,7 @@ function Login() {
 	const [loading, setLoading] = useState(false);
 	const navigate = useNavigate();
 
-	const API_URL = process.env.REACT_APP_API_URL;
+	const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 		setError('');
@@ -20,7 +20,10 @@ function Login() {
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ username, password })
 			});
-			const data = await res.json();
+			const contentType = res.headers.get('content-type') || '';
+			const data = contentType.includes('application/json')
+				? await res.json()
+				: { error: `Backend returned an unexpected response (${res.status})` };
 			if ( (res.ok && data.success) ) {
 				localStorage.setItem('token', data.token);
 				navigate('/dashboard');
@@ -141,4 +144,3 @@ function Login() {
 }
 
 export default Login;
-
