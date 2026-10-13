@@ -4,6 +4,8 @@ import DashboardLayout from './DashboardLayout';
 
 function formatDate(dateStr) {
 	if (!dateStr) return '-';
+	const m = typeof dateStr === 'string' && dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+	if (m) return `${m[3]}-${m[2]}-${m[1]}`;
 	const d = new Date(dateStr);
 	if (isNaN(d)) return '-';
 	return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;

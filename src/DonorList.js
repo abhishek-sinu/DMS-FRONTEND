@@ -46,6 +46,8 @@ function DonorList() {
 	// Utility to format date as DD-MM-YYYY
 	function formatDateDisplay(dateString) {
 		if (!dateString) return '';
+		const m = typeof dateString === 'string' && dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
+		if (m) return `${m[3]}-${m[2]}-${m[1]}`;
 		const date = new Date(dateString);
 		if (isNaN(date)) return dateString;
 		const day = String(date.getDate()).padStart(2, '0');

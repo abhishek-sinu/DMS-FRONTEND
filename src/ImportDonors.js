@@ -78,9 +78,11 @@ export default function ImportDonors({ onImport }) {
           const dbCol = headerMap[key] || headerMap[key.trim()] || key.toLowerCase().replace(/\s+/g, '_');
           if (dbCol !== 'id') {
             let val = row[key];
-            // Convert Excel Date objects to YYYY-MM-DD strings
+            // Convert Excel Date objects to YYYY-MM-DD strings.
+            // SheetJS dates can be a few minutes before local midnight (tz offset quirk),
+            // so shift by 12h before taking the local date.
             if (val instanceof Date && !isNaN(val)) {
-              val = val.toLocaleDateString('en-CA'); // produces YYYY-MM-DD
+              val = new Date(val.getTime() + 12 * 60 * 60 * 1000).toLocaleDateString('en-CA');
             }
             mapped[dbCol] = val;
           }
