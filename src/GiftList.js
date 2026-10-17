@@ -3,6 +3,7 @@ import DashboardLayout from './DashboardLayout';
 import GiftForm from './GiftForm';
 import GiftEdit from './GiftEdit';
 import ImportGifts from './ImportGifts';
+import * as XLSX from 'xlsx';
 
 function isAuthenticated() {
   return !!localStorage.getItem('token'); 
@@ -41,19 +42,24 @@ function GiftList() {
 
   const fetchGifts = () => {
     setLoading(true);
+    setError('');
     const token = localStorage.getItem('token');
-    console.log('Fetching gifts with token:', token);
 
     fetch(`${process.env.REACT_APP_API_URL}/api/gifts`, {
       headers: { Authorization: `Bearer ${token}` }
     })
-      .then(res => res.json())
+      .then(async res => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || data.error || 'Failed to fetch gifts');
+        if (!Array.isArray(data.data)) throw new Error('Invalid gift list response');
+        return data;
+      })
       .then(data => {
-        setGifts(data.data || []);//data
+        setGifts(data.data);
         setLoading(false);
       })
-      .catch(() => {
-        setError('Failed to fetch gifts');
+      .catch(err => {
+        setError('Failed to fetch gifts: ' + err.message);
         setLoading(false);
       });
   };
@@ -155,6 +161,36 @@ const filteredGifts = search
   ? gifts.filter(g => ['phone', 'gift_name', 'description'].some(k => g[k] && g[k].toString().toLowerCase().includes(search.toLowerCase())))
   : gifts;
 
+const handleExport = (format) => {
+  setExportError('');
+  try {
+    if (!filteredGifts.length) throw new Error('No gifts match the current search.');
+    if (format === 'xls' && filteredGifts.length > 65535) {
+      throw new Error('XLS supports up to 65,535 data rows. Use CSV to export all matching gifts.');
+    }
+    const text = (value) => {
+      const result = String(value ?? '');
+      // CSV has no cell types, so escape text that spreadsheets could execute.
+      return format === 'csv' && /^[\s]*[=+\-@]|^[\t\r\n]/.test(result) ? `'${result}` : result;
+    };
+    const rows = filteredGifts.map(gift => ({
+      'Phone': text(gift.phone),
+      'Gift Name': text(gift.gift_name),
+      'Description': text(gift.description),
+      'Value': gift.value == null || gift.value === '' ? '' : Number(gift.value),
+      'Date Given': text(formatDate(gift.date_given)),
+    }));
+    const sheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, sheet, 'Gifts');
+    XLSX.writeFile(workbook, `gifts${search ? '_filtered' : ''}.${format}`, {
+      bookType: format === 'xls' ? 'biff8' : 'csv',
+    });
+  } catch (err) {
+    setExportError(err.message || 'Failed to export gifts. Please try again.');
+  }
+};
+
 return (
   <DashboardLayout user={null}>
     <div className="max-w-6xl mx-auto mt-4 sm:mt-8 bg-white p-4 sm:p-6 rounded shadow" aria-labelledby="gift-list-title">
@@ -199,9 +235,20 @@ return (
       </div>
 
       {/* Import */}
-      <div className="mb-4">
+      <div className="mb-4 flex items-start justify-between gap-3 flex-wrap">
         <ImportGifts onImport={fetchGifts} />
+        <div className="flex gap-2 sm:ml-auto">
+          <button type="button" onClick={() => handleExport('xls')} disabled={loading || !!error}
+            className="bg-green-600 text-white py-2 px-4 rounded font-semibold hover:bg-green-700 transition disabled:opacity-60">
+            Export XLS
+          </button>
+          <button type="button" onClick={() => handleExport('csv')} disabled={loading || !!error}
+            className="bg-blue-600 text-white py-2 px-4 rounded font-semibold hover:bg-blue-700 transition disabled:opacity-60">
+            Export CSV
+          </button>
+        </div>
       </div>
+      {exportError && <div role="alert" className="mb-3 text-red-500">{exportError}</div>}
 
       {/* Forms */}
 

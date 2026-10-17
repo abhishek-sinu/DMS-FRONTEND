@@ -4,6 +4,7 @@ import DonationEdit from './DonationEdit';
 import DashboardLayout from './DashboardLayout';
 import ImportDonations from './ImportDonations';
 import { downloadDonationReceipt } from './receiptTemplate';
+import * as XLSX from 'xlsx';
 
 function isAuthenticated() {
 	return !!localStorage.getItem('token');
@@ -30,6 +31,62 @@ function DonationList() {
 	const [search, setSearch] = useState('');
 	const [donorCache, setDonorCache] = useState({});
 	const [templeSettings, setTempleSettings] = useState(null);
+	const [exporting, setExporting] = useState('');
+	const [exportError, setExportError] = useState('');
+
+	const handleExport = async (format) => {
+		setExporting(format);
+		setExportError('');
+		try {
+			const token = localStorage.getItem('token');
+			const params = new URLSearchParams({ paginated: '1', page: '1', limit: '200' });
+			if (search) params.set('search', search);
+			const allDonations = [];
+			let pages = 1;
+			for (let page = 1; page <= pages; page++) {
+				params.set('page', String(page));
+				const res = await fetch(`${API_URL}/api/donations?${params.toString()}`, {
+					headers: { Authorization: `Bearer ${token}` },
+				});
+				if (!res.ok) throw new Error('Failed to fetch donations for export. Please try again.');
+				const data = await res.json();
+				if (!Array.isArray(data.items) || !Number.isInteger(data.pagination?.totalPages) || data.pagination.totalPages < 0) {
+					throw new Error('Invalid donation export response. Please try again.');
+				}
+				if (page === 1) pages = data.pagination.totalPages;
+				allDonations.push(...data.items);
+			}
+			if (!allDonations.length) throw new Error('No donations match the current search.');
+			if (format === 'xls' && allDonations.length > 65535) {
+				throw new Error('XLS supports up to 65,535 data rows. Use CSV to export all matching donations.');
+			}
+			const text = (value) => {
+				const result = String(value ?? '');
+				// CSV has no cell types, so escape text that spreadsheets could execute.
+				return format === 'csv' && /^[\s]*[=+\-@]|^[\t\r\n]/.test(result) ? `'${result}` : result;
+			};
+			const rows = allDonations.map(d => ({
+				'Receipt Number': text(d.receipt_number),
+				'Phone Number': text(d.phone_number),
+				'Transaction Date': text(formatDate(d.transaction_date)),
+				'Instrument Number': text(d.instrument_number),
+				'Donor Name': text(d.donor_name),
+				'Amount': d.amount == null || d.amount === '' ? '' : Number(d.amount),
+				'Scheme Name': text(d.scheme_name),
+				'Mode Of Payment': text(d.mode_of_payment),
+			}));
+			const sheet = XLSX.utils.json_to_sheet(rows);
+			const workbook = XLSX.utils.book_new();
+			XLSX.utils.book_append_sheet(workbook, sheet, 'Donations');
+			XLSX.writeFile(workbook, `donations${search ? '_filtered' : ''}.${format}`, {
+				bookType: format === 'xls' ? 'biff8' : 'csv',
+			});
+		} catch (err) {
+			setExportError(err.message || 'Failed to export donations. Please try again.');
+		} finally {
+			setExporting('');
+		}
+	};
 
 	const fetchDonations = () => {
 		setLoading(true);
@@ -178,9 +235,20 @@ function DonationList() {
 						<span className="text-sm text-gray-500">per page</span>
 					</div>
 				</div>
-				<div className="mb-4">
+				<div className="mb-4 flex items-start justify-between gap-3 flex-wrap">
 					<ImportDonations onImport={fetchDonations} />
+					<div className="flex gap-2 sm:ml-auto">
+						<button type="button" onClick={() => handleExport('xls')} disabled={!!exporting || loading}
+							className="bg-green-600 text-white py-2 px-4 rounded font-semibold hover:bg-green-700 transition disabled:opacity-60">
+							{exporting === 'xls' ? 'Exporting XLS...' : 'Export XLS'}
+						</button>
+						<button type="button" onClick={() => handleExport('csv')} disabled={!!exporting || loading}
+							className="bg-blue-600 text-white py-2 px-4 rounded font-semibold hover:bg-blue-700 transition disabled:opacity-60">
+							{exporting === 'csv' ? 'Exporting CSV...' : 'Export CSV'}
+						</button>
+					</div>
 				</div>
+				{exportError && <div role="alert" className="mb-3 text-red-500">{exportError}</div>}
 				{showAdd && <DonationForm onSuccess={() => { setShowAdd(false); fetchDonations(); }} onCancel={() => setShowAdd(false)} />}
 				{editId && <DonationEdit donationId={editId} onSuccess={() => { setEditId(null); fetchDonations(); }} onCancel={() => setEditId(null)} />}
 				{loading && (

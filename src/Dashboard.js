@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from './DashboardLayout';
+import { buildAddress } from './donorAddress';
 
 function formatDate(dateStr) {
 	if (!dateStr) return '-';
@@ -40,7 +41,7 @@ function Dashboard() {
 				document.body.appendChild(a); a.click(); a.remove();
 				window.URL.revokeObjectURL(url);
 			})
-			.catch(() => {})
+			.catch(() => window.alert('Failed to export dashboard details. Please try again.'))
 			.finally(() => setModalExporting(''));
 	};
 	const [detailsModalOpen, setDetailsModalOpen] = useState(false);
@@ -158,42 +159,42 @@ function Dashboard() {
 			) : (
 				<>
 					{/* Summary Cards */}
-					<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
+					<div aria-label="Dashboard summary" className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-8">
 						<div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 p-6 flex items-center gap-4 border border-gray-100 group cursor-pointer" onClick={() => navigate('/donors')}>
-							<div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+							<div className="w-14 h-14 shrink-0 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
 								<svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
 							</div>
-							<div>
-								<span className="text-3xl font-extrabold text-gray-800">{stats.totalDonors}</span>
+							<div className="min-w-0 flex-1">
+								<span className="block break-all text-3xl font-extrabold text-gray-800">{stats.totalDonors}</span>
 								<p className="text-sm text-gray-500 font-medium mt-0.5">Total Donors</p>
 							</div>
 						</div>
 						<div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 p-6 flex items-center gap-4 border border-gray-100 group cursor-pointer" onClick={() => navigate('/donations')}>
-							<div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+							<div className="w-14 h-14 shrink-0 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
 								<svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" strokeWidth="2" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 7h6M9 10h6M12 17l-3-4h4.5a2.5 2.5 0 000-5" /></svg>
 							</div>
-							<div>
-								<span className="text-xl font-extrabold text-gray-800 block max-w-[160px] truncate" title={stats.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}>
+							<div className="min-w-0 flex-1">
+								<span className="block break-all text-2xl sm:text-3xl font-extrabold text-gray-800" title={stats.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}>
 									₹{stats.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
 								</span>
 								<p className="text-sm text-gray-500 font-medium mt-0.5">Total Donations</p>
 							</div>
 						</div>
 						<div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 p-6 flex items-center gap-4 border border-gray-100 group cursor-pointer" onClick={() => navigate('/donations')}>
-							<div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+							<div className="w-14 h-14 shrink-0 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
 								<svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
 							</div>
-							<div>
-								<span className="text-3xl font-extrabold text-gray-800">{stats.totalRecords}</span>
+							<div className="min-w-0 flex-1">
+								<span className="block break-all text-3xl font-extrabold text-gray-800">{stats.totalRecords}</span>
 								<p className="text-sm text-gray-500 font-medium mt-0.5">Donation Records</p>
 							</div>
 						</div>
 						<div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 p-6 flex items-center gap-4 border border-gray-100 group cursor-pointer" onClick={() => navigate('/cultivators')}>
-							<div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+							<div className="w-14 h-14 shrink-0 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
 								<svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
 							</div>
-							<div>
-								<span className="text-3xl font-extrabold text-gray-800">{stats.totalCultivators}</span>
+							<div className="min-w-0 flex-1">
+								<span className="block break-all text-3xl font-extrabold text-gray-800">{stats.totalCultivators}</span>
 								<p className="text-sm text-gray-500 font-medium mt-0.5">Total Cultivators</p>
 							</div>
 						</div>
@@ -415,7 +416,7 @@ function Dashboard() {
 											<div><span className="font-semibold text-gray-600">Email:</span> <span className="text-gray-800">{donorDetails.email || '-'}</span></div>
 											<div><span className="font-semibold text-gray-600">Date of Birth:</span> <span className="text-gray-800">{formatDate(donorDetails.date_of_birth)}</span></div>
 											<div><span className="font-semibold text-gray-600">Anniversary:</span> <span className="text-gray-800">{formatDate(donorDetails.anniversary_date)}</span></div>
-											<div><span className="font-semibold text-gray-600">Address:</span> <span className="text-gray-800">{donorDetails.address || '-'}</span></div>
+											<div className="break-words"><span className="font-semibold text-gray-600">Address:</span> <span className="text-gray-800">{buildAddress(donorDetails) || '-'}</span></div>
 										</div>
 
 										<div>

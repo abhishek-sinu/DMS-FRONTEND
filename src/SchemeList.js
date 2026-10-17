@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import DashboardLayout from './DashboardLayout';
+import * as XLSX from 'xlsx';
 
 function isAuthenticated() {
   return !!localStorage.getItem('token');
@@ -10,6 +11,7 @@ function SchemeList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [exportError, setExportError] = useState('');
 
   const [newName, setNewName] = useState('');
   const [adding, setAdding] = useState(false);
@@ -37,13 +39,18 @@ function SchemeList() {
     fetch(`${process.env.REACT_APP_API_URL}/api/schemes`, {
       headers: { Authorization: `Bearer ${token}` }
     })
-      .then(res => res.json())
+      .then(async res => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to fetch schemes');
+        if (!Array.isArray(data.data)) throw new Error('Invalid scheme list response');
+        return data;
+      })
       .then(data => {
         setSchemes(data.data || []);
         setLoading(false);
       })
-      .catch(() => {
-        setError('Failed to fetch schemes');
+      .catch(err => {
+        setError(err.message || 'Failed to fetch schemes');
         setLoading(false);
       });
   };
@@ -130,6 +137,26 @@ function SchemeList() {
 
   const totalPages = Math.ceil(filteredSchemes.length / pageSize) || 1;
 
+  const handleExport = () => {
+    setExportError('');
+    try {
+      if (!filteredSchemes.length) throw new Error('No schemes match the current search.');
+      if (filteredSchemes.length > 65535) {
+        throw new Error('XLS supports up to 65,535 data rows. Refine your search before exporting.');
+      }
+      const rows = filteredSchemes.map((scheme, index) => ({
+        '#': index + 1,
+        'Scheme Name': scheme.name || '',
+      }));
+      const sheet = XLSX.utils.json_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, sheet, 'Schemes');
+      XLSX.writeFile(workbook, `schemes${search ? '_filtered' : ''}.xls`, { bookType: 'biff8' });
+    } catch (err) {
+      setExportError(err.message || 'Failed to export schemes. Please try again.');
+    }
+  };
+
   return (
     <DashboardLayout user={null}>
       <div className="max-w-4xl mx-auto mt-4 sm:mt-8 bg-white p-4 sm:p-6 rounded shadow" aria-labelledby="scheme-list-title">
@@ -168,6 +195,10 @@ function SchemeList() {
             className="border rounded px-3 py-2 text-sm w-full sm:w-56 focus:outline-none focus:ring-2 focus:ring-blue-300"
           />
 
+          <button type="button" onClick={handleExport} disabled={loading || !!error}
+            className="bg-green-600 text-white py-2 px-4 rounded font-semibold hover:bg-green-700 transition disabled:opacity-60">
+            Export XLS
+          </button>
           <div className="w-full sm:w-auto sm:ml-auto flex items-center gap-2 sm:justify-end">
             <label className="text-sm font-semibold text-gray-600">Show:</label>
             <select
@@ -184,6 +215,7 @@ function SchemeList() {
             <span className="text-sm text-gray-500">per page</span>
           </div>
         </div>
+        {exportError && <div role="alert" className="mb-3 text-red-500">{exportError}</div>}
 
         {loading && (
           <div className="flex flex-col items-center justify-center py-20 gap-4">

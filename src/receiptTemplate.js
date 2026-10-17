@@ -3,6 +3,8 @@
 // official ISKCON Hyderabad format. Opens a print window so the user can
 // save it as a PDF or print it directly — no extra dependencies required.
 
+import { buildAddress } from './donorAddress';
+
 // --- Default temple / trust details ---
 // These are used as a fallback when saved Temple Settings are not available.
 // The values can be edited from the Temple Settings screen and are passed in
@@ -106,33 +108,6 @@ export function amountInWords(amount) {
   const rupeeWords = integerToWords(rupees) || 'Zero';
   const paiseWords = paise === 0 ? 'Zero' : twoDigitsToWords(paise);
   return `${rupeeWords} And ${paiseWords} Paise Only`;
-}
-
-// Build a single donor address line from donor record (falls back gracefully)
-function buildAddress(donor) {
-  if (!donor) return '';
-  // Prefer the new structured address format
-  const newParts = [
-    donor.address_line1,
-    donor.address_line2,
-    donor.post_office,
-    donor.city,
-    donor.district,
-    donor.state,
-    donor.pin_code,
-    donor.country,
-  ].filter(Boolean);
-  if (newParts.length) return newParts.join(' , ');
-  // Fallback to legacy address fields
-  const parts = [
-    donor.address_house,
-    donor.address_city,
-    donor.address_state,
-    donor.address_house || donor.address_city ? 'India' : '',
-    donor.address_pin,
-  ].filter(Boolean);
-  if (parts.length) return parts.join(' , ');
-  return donor.address || '';
 }
 
 function copyHtml(title, donation, donor, TEMPLE) {
