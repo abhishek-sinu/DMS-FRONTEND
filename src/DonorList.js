@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import DonorForm from './DonorForm';
-import DonorEdit from './DonorEdit';
-import DashboardLayout from './DashboardLayout';
-import ImportDonors from './ImportDonors';
 import { Link } from 'react-router-dom';
 import * as XLSX from 'xlsx';
+import DashboardLayout from './DashboardLayout';
+import DonorEdit from './DonorEdit';
+import DonorForm from './DonorForm';
+import ImportDonors from './ImportDonors';
 
 function isAuthenticated() {
 	return !!localStorage.getItem('token');
@@ -31,6 +31,7 @@ function DonorList() {
 	const [anniversaryFrom, setAnniversaryFrom] = useState('');
 	const [anniversaryTo, setAnniversaryTo] = useState('');
 	const [exportingPdf, setExportingPdf] = useState(false);
+	const [exportingCsv, setExportingCsv] = useState(false);
 	const [exportingAllExcel, setExportingAllExcel] = useState(false);
 
 	// Compare month-day only (ignores year) for birthday/anniversary filters
@@ -190,6 +191,25 @@ function DonorList() {
 			.finally(() => setExportingPdf(false));
 	};
 
+	const handleExportCsv = () => {
+		setExportingCsv(true);
+		const token = localStorage.getItem('token');
+		const params = buildExportParams();
+		fetch(`${API_URL}/api/donors/export/csv?${params.toString()}`, {
+			headers: { Authorization: `Bearer ${token}` }
+		})
+			.then(res => { if (!res.ok) throw new Error('Export failed'); return res.blob(); })
+			.then(blob => {
+				const url = window.URL.createObjectURL(blob);
+				const a = document.createElement('a');
+				a.href = url; a.download = 'donors_filtered.csv';
+				document.body.appendChild(a); a.click(); a.remove();
+				window.URL.revokeObjectURL(url);
+			})
+			.catch(() => setError('Failed to export CSV'))
+			.finally(() => setExportingCsv(false));
+	};
+
 	return (
 		<DashboardLayout user={null}>
 			<div className="max-w-full mx-auto mt-4 sm:mt-10 bg-white p-4 sm:p-8 rounded-xl shadow-lg border border-gray-200" aria-labelledby="donor-list-title">
@@ -249,21 +269,24 @@ function DonorList() {
 								✕ Clear Filters
 							</button>
 						)}
-						<div className="flex gap-2 mt-4 ml-auto">
+						<div className="flex flex-wrap gap-2 mt-4 ml-auto">
 							<button onClick={handleExportExcel} className="bg-green-600 text-white px-4 py-1.5 rounded font-semibold text-sm hover:bg-green-700 transition flex items-center gap-1.5">
 								<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
 								Export Page
 							</button>
 							<button onClick={handleExportAllExcel} disabled={exportingAllExcel} className="bg-green-700 text-white px-4 py-1.5 rounded font-semibold text-sm hover:bg-green-800 transition disabled:opacity-60 flex items-center gap-1.5">
 								{exportingAllExcel ? (
-									<><svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Exporting...</>
+									<><svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Exporting...</>
 								) : (
 									<><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>Export All</>
 								)}
 							</button>
+							<button onClick={handleExportCsv} disabled={exportingCsv} className="bg-blue-600 text-white px-4 py-1.5 rounded font-semibold text-sm hover:bg-blue-700 transition disabled:opacity-60 flex items-center gap-1.5">
+								{exportingCsv ? 'Exporting...' : <><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>CSV</>}
+							</button>
 							<button onClick={handleExportPdf} disabled={exportingPdf} className="bg-red-600 text-white px-4 py-1.5 rounded font-semibold text-sm hover:bg-red-700 transition disabled:opacity-60 flex items-center gap-1.5">
 								{exportingPdf ? (
-									<><svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Exporting...</>
+									<><svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Exporting...</>
 								) : (
 									<><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>PDF</>
 								)}
@@ -298,7 +321,7 @@ function DonorList() {
 								<th className="py-3 px-5 border-b font-semibold">PAN Card</th>
 								<th className="py-3 px-5 border-b font-semibold">Cultivator</th>
 								<th className="py-3 px-5 border-b font-semibold">Last Gift</th>
-                                
+
 								<th className="py-3 px-5 border-b font-semibold">Actions</th>
 							</tr>
 						</thead>
@@ -314,7 +337,7 @@ function DonorList() {
 										<td className="py-3 px-5 border-b text-gray-700">{donor.pan_card || '-'}</td>
 										<td className="py-3 px-5 border-b text-gray-700">{donor.cultivator_name || '-'}</td>
 										<td className="py-3 px-5 border-b text-gray-700">{donor.last_gift_details || '-'}</td>
-                                        
+
 										<td className="py-3 px-5 border-b">
 											<div className="flex flex-wrap gap-2 justify-center items-center">
 												<button
@@ -377,35 +400,35 @@ function DonorList() {
 					</div>
 				)}
 			</div>
-		{/* Delete confirmation modal */}
-		{deleteDonorId && (
-			<div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
-				<div className="bg-white p-5 sm:p-8 rounded-lg shadow-lg w-full max-w-md mx-4 relative">
-					<h3 className="text-xl font-bold mb-4">Confirm Delete</h3>
-					<p className="mb-4">Are you sure you want to delete this donor?</p>
-					<p className="mb-2 text-gray-700">Type <span className="font-mono bg-gray-100 px-2 py-1 rounded">delete donor</span> to confirm:</p>
-					<input
-						type="text"
-						className="border p-2 rounded w-full mb-6"
-						value={deleteConfirmText}
-						onChange={e => setDeleteConfirmText(e.target.value)}
-						placeholder="delete donor"
-						autoFocus
-					/>
-					<div className="flex gap-4 justify-end">
-						<button
-							className="bg-red-600 text-white py-2 px-6 rounded font-semibold hover:bg-red-700 transition"
-							onClick={handleDelete}
-							disabled={deleteLoading || deleteConfirmText.trim().toLowerCase() !== 'delete donor'}
-						>{deleteLoading ? 'Deleting...' : 'Delete'}</button>
-						<button
-							className="bg-gray-400 text-white py-2 px-6 rounded font-semibold hover:bg-gray-500 transition"
-							onClick={() => { setDeleteDonorId(null); setDeleteConfirmText(''); }}
-						>Cancel</button>
+			{/* Delete confirmation modal */}
+			{deleteDonorId && (
+				<div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
+					<div className="bg-white p-5 sm:p-8 rounded-lg shadow-lg w-full max-w-md mx-4 relative">
+						<h3 className="text-xl font-bold mb-4">Confirm Delete</h3>
+						<p className="mb-4">Are you sure you want to delete this donor?</p>
+						<p className="mb-2 text-gray-700">Type <span className="font-mono bg-gray-100 px-2 py-1 rounded">delete donor</span> to confirm:</p>
+						<input
+							type="text"
+							className="border p-2 rounded w-full mb-6"
+							value={deleteConfirmText}
+							onChange={e => setDeleteConfirmText(e.target.value)}
+							placeholder="delete donor"
+							autoFocus
+						/>
+						<div className="flex gap-4 justify-end">
+							<button
+								className="bg-red-600 text-white py-2 px-6 rounded font-semibold hover:bg-red-700 transition"
+								onClick={handleDelete}
+								disabled={deleteLoading || deleteConfirmText.trim().toLowerCase() !== 'delete donor'}
+							>{deleteLoading ? 'Deleting...' : 'Delete'}</button>
+							<button
+								className="bg-gray-400 text-white py-2 px-6 rounded font-semibold hover:bg-gray-500 transition"
+								onClick={() => { setDeleteDonorId(null); setDeleteConfirmText(''); }}
+							>Cancel</button>
+						</div>
 					</div>
 				</div>
-			</div>
-		)}
+			)}
 		</DashboardLayout>
 	);
 }

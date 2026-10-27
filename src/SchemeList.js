@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import DashboardLayout from './DashboardLayout';
+import { useEffect, useState } from 'react';
 import * as XLSX from 'xlsx';
+import DashboardLayout from './DashboardLayout';
 
 function isAuthenticated() {
   return !!localStorage.getItem('token');
@@ -137,21 +137,25 @@ function SchemeList() {
 
   const totalPages = Math.ceil(filteredSchemes.length / pageSize) || 1;
 
-  const handleExport = () => {
+  const handleExport = (format = 'xls') => {
     setExportError('');
     try {
       if (!filteredSchemes.length) throw new Error('No schemes match the current search.');
-      if (filteredSchemes.length > 65535) {
+      if (format === 'xls' && filteredSchemes.length > 65535) {
         throw new Error('XLS supports up to 65,535 data rows. Refine your search before exporting.');
       }
-      const rows = filteredSchemes.map((scheme, index) => ({
-        '#': index + 1,
-        'Scheme Name': scheme.name || '',
-      }));
+      const rows = filteredSchemes.map((scheme, index) => {
+        const name = scheme.name || '';
+        const safeName = format === 'csv' && /^[\t\r ]*[=+\-@]/.test(String(name)) ? `'${name}` : name;
+        return { '#': index + 1, 'Scheme Name': safeName };
+      });
       const sheet = XLSX.utils.json_to_sheet(rows);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, sheet, 'Schemes');
-      XLSX.writeFile(workbook, `schemes${search ? '_filtered' : ''}.xls`, { bookType: 'biff8' });
+      const extension = format === 'csv' ? 'csv' : 'xls';
+      XLSX.writeFile(workbook, `schemes${search ? '_filtered' : ''}.${extension}`, {
+        bookType: format === 'csv' ? 'csv' : 'biff8',
+      });
     } catch (err) {
       setExportError(err.message || 'Failed to export schemes. Please try again.');
     }
@@ -198,6 +202,10 @@ function SchemeList() {
           <button type="button" onClick={handleExport} disabled={loading || !!error}
             className="bg-green-600 text-white py-2 px-4 rounded font-semibold hover:bg-green-700 transition disabled:opacity-60">
             Export XLS
+          </button>
+          <button type="button" onClick={() => handleExport('csv')} disabled={loading || !!error}
+            className="bg-blue-600 text-white py-2 px-4 rounded font-semibold hover:bg-blue-700 transition disabled:opacity-60">
+            Export CSV
           </button>
           <div className="w-full sm:w-auto sm:ml-auto flex items-center gap-2 sm:justify-end">
             <label className="text-sm font-semibold text-gray-600">Show:</label>

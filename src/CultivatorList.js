@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import DashboardLayout from './DashboardLayout';
-import CultivatorForm from './CultivatorForm';
+import { useEffect, useState } from 'react';
 import CultivatorEdit from './CultivatorEdit';
+import CultivatorForm from './CultivatorForm';
+import DashboardLayout from './DashboardLayout';
 import ImportCultivators from './ImportCultivators';
 
 function isAuthenticated() {
@@ -35,7 +35,7 @@ function CultivatorList() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `cultivators.${type === 'xls' ? 'xlsx' : 'pdf'}`;
+        a.download = `cultivators.${type === 'xls' ? 'xlsx' : type}`;
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -136,9 +136,9 @@ function CultivatorList() {
 
   const filteredCultivators = search
     ? cultivators.filter(c => ['name', 'phone', 'id'].some(k => {
-        const value = k === 'id' ? c.id : c[k];
-        return value !== undefined && value !== null && value.toString().toLowerCase().includes(search.toLowerCase());
-      }))
+      const value = k === 'id' ? c.id : c[k];
+      return value !== undefined && value !== null && value.toString().toLowerCase().includes(search.toLowerCase());
+    }))
     : cultivators;
 
   return (
@@ -150,6 +150,7 @@ function CultivatorList() {
         <div className="flex items-center gap-2 mb-4 flex-wrap">
           <button className="bg-green-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-green-700 transition" onClick={() => setShowAdd(true)} aria-label="Add Cultivator">Add Cultivator</button>
           <button onClick={() => handleExport('xls')} className="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg font-semibold text-sm transition">Export Excel</button>
+          <button onClick={() => handleExport('csv')} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold text-sm transition">Export CSV</button>
           <button onClick={() => handleExport('pdf')} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold text-sm transition">Export PDF</button>
           <input
             type="text"

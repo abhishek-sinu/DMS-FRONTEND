@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
 
 const BATCH_SIZE = 500;
@@ -136,7 +136,7 @@ export default function ImportDonations({ onImport }) {
       const parts = [];
       if (totalInserted > 0) parts.push(`${totalInserted} inserted`);
       if (totalNewDonors > 0) parts.push(`${totalNewDonors} new donor(s) created`);
-      if (totalSkipped > 0) parts.push(`${totalSkipped} skipped (missing receipt/phone)`);
+      if (totalSkipped > 0) parts.push(`${totalSkipped} skipped (missing required fields)`);
       if (totalFailed > 0) parts.push(`${totalFailed} failed`);
       const message = rows.length === 0 ? 'No rows found.' : parts.length ? parts.join(', ') + '.' : 'No rows processed.';
 
@@ -229,8 +229,8 @@ export default function ImportDonations({ onImport }) {
               importResult.failed
                 ? 'text-red-700 font-semibold'
                 : importResult.skipped
-                ? 'text-yellow-700 font-semibold'
-                : 'text-green-700 font-semibold'
+                  ? 'text-yellow-700 font-semibold'
+                  : 'text-green-700 font-semibold'
             }>
               {importResult.message}
             </span>
@@ -251,7 +251,7 @@ export default function ImportDonations({ onImport }) {
             <>
               {importResult.skipped > 0 && (
                 <div className="mt-2 text-sm text-yellow-700 font-medium">
-                  {importResult.skipped} row(s) were skipped because they are missing Receipt Number or Phone Number.
+                  {importResult.skipped} row(s) were skipped because they are missing Receipt Number, Phone Number, or Mode Of Payment.
                 </div>
               )}
               {importResult.newDonors > 0 && (
@@ -277,8 +277,8 @@ export default function ImportDonations({ onImport }) {
                           r.status === 'failed'
                             ? 'bg-red-100'
                             : r.status === 'skipped'
-                            ? 'bg-yellow-100'
-                            : ''
+                              ? 'bg-yellow-100'
+                              : ''
                         }
                       >
                         <td className="py-1 px-2 border">{r.row}</td>

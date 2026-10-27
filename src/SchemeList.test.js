@@ -1,4 +1,4 @@
-import React, { act } from 'react';
+import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Simulate } from 'react-dom/test-utils';
 import * as XLSX from 'xlsx';
@@ -60,6 +60,15 @@ describe('Scheme XLS export', () => {
     const [workbook, filename] = XLSX.writeFile.mock.calls[0];
     expect(filename).toBe('schemes_filtered.xls');
     expect(XLSX.utils.sheet_to_json(workbook.Sheets.Schemes)).toEqual([{ '#': 1, 'Scheme Name': 'Seva 12' }]);
+  });
+
+  test('exports all matching schemes as CSV', async () => {
+    await act(async () => root.render(<SchemeList />));
+    await act(async () => Array.from(container.querySelectorAll('button')).find(b => b.textContent === 'Export CSV').click());
+    const [workbook, filename, options] = XLSX.writeFile.mock.calls[0];
+    expect(filename).toBe('schemes.csv');
+    expect(options.bookType).toBe('csv');
+    expect(XLSX.utils.sheet_to_json(workbook.Sheets.Schemes)).toHaveLength(12);
   });
 
   test('reports no matching rows without downloading', async () => {

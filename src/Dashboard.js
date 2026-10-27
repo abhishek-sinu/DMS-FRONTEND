@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from './DashboardLayout';
 import { buildAddress } from './donorAddress';
@@ -28,7 +28,7 @@ function Dashboard() {
 	const handleModalExport = (type) => {
 		const token = localStorage.getItem('token');
 		const endpoint = modalType === 'birthdays' ? 'upcoming-birthdays' : 'upcoming-anniversaries';
-		const filename = `${endpoint}.${type === 'xls' ? 'xlsx' : 'pdf'}`;
+		const filename = `${endpoint}.${type === 'xls' ? 'xlsx' : type}`;
 		setModalExporting(type);
 		fetch(`${API_URL}/api/dashboard/${endpoint}/export/${type}`, {
 			headers: { Authorization: `Bearer ${token}` }
@@ -277,37 +277,44 @@ function Dashboard() {
 								<span className="text-2xl">{modalType === 'birthdays' ? '🎂' : '💍'}</span>
 								{modalType === 'birthdays' ? 'Upcoming Birthdays' : 'Upcoming Anniversaries'}
 							</h3>
-						<div className="flex items-center gap-2">
-							{!modalLoading && (
-								<>
-									<button
-										onClick={() => handleModalExport('xls')}
-										disabled={!!modalExporting}
-										className="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition disabled:opacity-60 flex items-center gap-1"
-									>
-										{modalExporting === 'xls' ? (
-											<svg className="animate-spin h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-										) : (
-											<svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-										)}
-										Excel
-									</button>
-									<button
-										onClick={() => handleModalExport('pdf')}
-										disabled={!!modalExporting}
-										className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition disabled:opacity-60 flex items-center gap-1"
-									>
-										{modalExporting === 'pdf' ? (
-											<svg className="animate-spin h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-										) : (
-											<svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-										)}
-										PDF
-									</button>
-								</>
-							)}
-							<button onClick={() => setModalType(null)} className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition">&times;</button>
-						</div>
+							<div className="flex items-center gap-2">
+								{!modalLoading && (
+									<>
+										<button
+											onClick={() => handleModalExport('xls')}
+											disabled={!!modalExporting}
+											className="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition disabled:opacity-60 flex items-center gap-1"
+										>
+											{modalExporting === 'xls' ? (
+												<svg className="animate-spin h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+											) : (
+												<svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+											)}
+											Excel
+										</button>
+										<button
+											onClick={() => handleModalExport('csv')}
+											disabled={!!modalExporting}
+											className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition disabled:opacity-60 flex items-center gap-1"
+										>
+											{modalExporting === 'csv' ? 'Exporting...' : <><svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>CSV</>}
+										</button>
+										<button
+											onClick={() => handleModalExport('pdf')}
+											disabled={!!modalExporting}
+											className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition disabled:opacity-60 flex items-center gap-1"
+										>
+											{modalExporting === 'pdf' ? (
+												<svg className="animate-spin h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+											) : (
+												<svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+											)}
+											PDF
+										</button>
+									</>
+								)}
+								<button onClick={() => setModalType(null)} className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition">&times;</button>
+							</div>
 						</div>
 						<div className="flex-1 overflow-y-auto p-4 sm:p-6">
 							{modalLoading ? (
@@ -318,77 +325,77 @@ function Dashboard() {
 								<div className="text-center text-gray-400 py-10">No upcoming {modalType} in the next 30 days.</div>
 							) : (
 								<>
-								<div className="overflow-x-auto">
-								<table className="w-full text-sm">
-									<thead>
-										<tr className="bg-blue-50 text-blue-800 text-xs uppercase tracking-wider">
-											<th className="px-3 py-2 text-left">#</th>
-											{modalType === 'birthdays' ? (
-												<>
-													<th className="px-3 py-2 text-left">Donor</th>
-													<th className="px-3 py-2 text-left">Family Member</th>
-													<th className="px-3 py-2 text-left">Relation</th>
-													<th className="px-3 py-2 text-left">Phone</th>
-													<th className="px-3 py-2 text-left">DOB</th>
-													<th className="px-3 py-2 text-left">Action</th>
-												</>
-											) : (
-												<>
-													<th className="px-3 py-2 text-left">Name</th>
-													<th className="px-3 py-2 text-left">Phone</th>
-													<th className="px-3 py-2 text-left">Anniversary</th>
-													<th className="px-3 py-2 text-left">Action</th>
-												</>
-											)}
-										</tr>
-									</thead>
-									<tbody>
-										{modalData.slice((modalPage - 1) * MODAL_PAGE_SIZE, modalPage * MODAL_PAGE_SIZE).map((d, i) => (
-											<tr key={i} className={(i % 2 === 0 ? 'bg-white' : 'bg-gray-50') + ' border-t border-gray-100 hover:bg-blue-50 transition'}>
-												<td className="px-3 py-2.5 text-gray-500">{(modalPage - 1) * MODAL_PAGE_SIZE + i + 1}</td>
-												{modalType === 'birthdays' ? (
-													<>
-														<td className="px-3 py-2.5 font-medium text-gray-800">{d.donor_name || '-'}</td>
-														<td className="px-3 py-2.5 text-gray-700">{d.person_type === 'family' ? (d.person_name || '-') : '-'}</td>
-														<td className="px-3 py-2.5 text-gray-500 capitalize">{d.person_type === 'family' ? (d.relationship || '-') : '-'}</td>
-														<td className="px-3 py-2.5 text-gray-500">{d.phone || '-'}</td>
-														<td className="px-3 py-2.5">{formatDate(d.birthday)}</td>
-														<td className="px-3 py-2.5">
-															<button onClick={() => openDonorDetails(d.donor_id)} className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-semibold hover:bg-blue-700 transition">View</button>
-														</td>
-													</>
-												) : (
-													<>
-														<td className="px-3 py-2.5 font-medium text-gray-800">{d.name}</td>
-														<td className="px-3 py-2.5 text-gray-500">{d.phone || '-'}</td>
-														<td className="px-3 py-2.5">{formatDate(d.anniversary_date)}</td>
-														<td className="px-3 py-2.5">
-															<button onClick={() => openDonorDetails(d.donor_id)} className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-semibold hover:bg-blue-700 transition">View</button>
-														</td>
-													</>
-												)}
-											</tr>
-										))}
-									</tbody>
-								</table>
-								</div>
-								{/* Pagination */}
-								{modalData.length > MODAL_PAGE_SIZE && (
-									<div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
-										<span className="text-xs text-gray-500">
-											Showing {(modalPage - 1) * MODAL_PAGE_SIZE + 1}–{Math.min(modalPage * MODAL_PAGE_SIZE, modalData.length)} of {modalData.length}
-										</span>
-										<div className="flex gap-1">
-											<button disabled={modalPage === 1} onClick={() => setModalPage(1)} className="px-2 py-1 rounded border text-xs font-semibold disabled:opacity-40 hover:bg-blue-50 transition">«</button>
-											<button disabled={modalPage === 1} onClick={() => setModalPage(p => p - 1)} className="px-2 py-1 rounded border text-xs font-semibold disabled:opacity-40 hover:bg-blue-50 transition">‹</button>
-											{Array.from({ length: Math.ceil(modalData.length / MODAL_PAGE_SIZE) }, (_, i) => i + 1).map(p => (
-												<button key={p} onClick={() => setModalPage(p)} className={`px-2 py-1 rounded border text-xs font-semibold transition ${modalPage === p ? 'bg-blue-600 text-white' : 'hover:bg-blue-50'}`}>{p}</button>
-											))}
-											<button disabled={modalPage === Math.ceil(modalData.length / MODAL_PAGE_SIZE)} onClick={() => setModalPage(p => p + 1)} className="px-2 py-1 rounded border text-xs font-semibold disabled:opacity-40 hover:bg-blue-50 transition">›</button>
-											<button disabled={modalPage === Math.ceil(modalData.length / MODAL_PAGE_SIZE)} onClick={() => setModalPage(Math.ceil(modalData.length / MODAL_PAGE_SIZE))} className="px-2 py-1 rounded border text-xs font-semibold disabled:opacity-40 hover:bg-blue-50 transition">»</button>
-										</div>
+									<div className="overflow-x-auto">
+										<table className="w-full text-sm">
+											<thead>
+												<tr className="bg-blue-50 text-blue-800 text-xs uppercase tracking-wider">
+													<th className="px-3 py-2 text-left">#</th>
+													{modalType === 'birthdays' ? (
+														<>
+															<th className="px-3 py-2 text-left">Donor</th>
+															<th className="px-3 py-2 text-left">Family Member</th>
+															<th className="px-3 py-2 text-left">Relation</th>
+															<th className="px-3 py-2 text-left">Phone</th>
+															<th className="px-3 py-2 text-left">DOB</th>
+															<th className="px-3 py-2 text-left">Action</th>
+														</>
+													) : (
+														<>
+															<th className="px-3 py-2 text-left">Name</th>
+															<th className="px-3 py-2 text-left">Phone</th>
+															<th className="px-3 py-2 text-left">Anniversary</th>
+															<th className="px-3 py-2 text-left">Action</th>
+														</>
+													)}
+												</tr>
+											</thead>
+											<tbody>
+												{modalData.slice((modalPage - 1) * MODAL_PAGE_SIZE, modalPage * MODAL_PAGE_SIZE).map((d, i) => (
+													<tr key={i} className={(i % 2 === 0 ? 'bg-white' : 'bg-gray-50') + ' border-t border-gray-100 hover:bg-blue-50 transition'}>
+														<td className="px-3 py-2.5 text-gray-500">{(modalPage - 1) * MODAL_PAGE_SIZE + i + 1}</td>
+														{modalType === 'birthdays' ? (
+															<>
+																<td className="px-3 py-2.5 font-medium text-gray-800">{d.donor_name || '-'}</td>
+																<td className="px-3 py-2.5 text-gray-700">{d.person_type === 'family' ? (d.person_name || '-') : '-'}</td>
+																<td className="px-3 py-2.5 text-gray-500 capitalize">{d.person_type === 'family' ? (d.relationship || '-') : '-'}</td>
+																<td className="px-3 py-2.5 text-gray-500">{d.phone || '-'}</td>
+																<td className="px-3 py-2.5">{formatDate(d.birthday)}</td>
+																<td className="px-3 py-2.5">
+																	<button onClick={() => openDonorDetails(d.donor_id)} className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-semibold hover:bg-blue-700 transition">View</button>
+																</td>
+															</>
+														) : (
+															<>
+																<td className="px-3 py-2.5 font-medium text-gray-800">{d.name}</td>
+																<td className="px-3 py-2.5 text-gray-500">{d.phone || '-'}</td>
+																<td className="px-3 py-2.5">{formatDate(d.anniversary_date)}</td>
+																<td className="px-3 py-2.5">
+																	<button onClick={() => openDonorDetails(d.donor_id)} className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-semibold hover:bg-blue-700 transition">View</button>
+																</td>
+															</>
+														)}
+													</tr>
+												))}
+											</tbody>
+										</table>
 									</div>
-								)}
+									{/* Pagination */}
+									{modalData.length > MODAL_PAGE_SIZE && (
+										<div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+											<span className="text-xs text-gray-500">
+												Showing {(modalPage - 1) * MODAL_PAGE_SIZE + 1}–{Math.min(modalPage * MODAL_PAGE_SIZE, modalData.length)} of {modalData.length}
+											</span>
+											<div className="flex gap-1">
+												<button disabled={modalPage === 1} onClick={() => setModalPage(1)} className="px-2 py-1 rounded border text-xs font-semibold disabled:opacity-40 hover:bg-blue-50 transition">«</button>
+												<button disabled={modalPage === 1} onClick={() => setModalPage(p => p - 1)} className="px-2 py-1 rounded border text-xs font-semibold disabled:opacity-40 hover:bg-blue-50 transition">‹</button>
+												{Array.from({ length: Math.ceil(modalData.length / MODAL_PAGE_SIZE) }, (_, i) => i + 1).map(p => (
+													<button key={p} onClick={() => setModalPage(p)} className={`px-2 py-1 rounded border text-xs font-semibold transition ${modalPage === p ? 'bg-blue-600 text-white' : 'hover:bg-blue-50'}`}>{p}</button>
+												))}
+												<button disabled={modalPage === Math.ceil(modalData.length / MODAL_PAGE_SIZE)} onClick={() => setModalPage(p => p + 1)} className="px-2 py-1 rounded border text-xs font-semibold disabled:opacity-40 hover:bg-blue-50 transition">›</button>
+												<button disabled={modalPage === Math.ceil(modalData.length / MODAL_PAGE_SIZE)} onClick={() => setModalPage(Math.ceil(modalData.length / MODAL_PAGE_SIZE))} className="px-2 py-1 rounded border text-xs font-semibold disabled:opacity-40 hover:bg-blue-50 transition">»</button>
+											</div>
+										</div>
+									)}
 								</>
 							)}
 						</div>
@@ -396,33 +403,33 @@ function Dashboard() {
 				</div>
 			)}
 
-				{detailsModalOpen && (
-					<div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-						<div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[85vh] overflow-hidden">
-							<div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-blue-50">
-								<h3 className="text-lg font-bold text-gray-800">Donor Complete Details</h3>
-								<button onClick={() => setDetailsModalOpen(false)} className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition">&times;</button>
-							</div>
-							<div className="p-4 sm:p-6 overflow-y-auto" style={{ maxHeight: 'calc(85vh - 64px)' }}>
-								{detailsLoading ? (
-									<div className="text-center text-gray-500 py-8">Loading details...</div>
-								) : !donorDetails ? (
-									<div className="text-center text-red-500 py-8">Failed to load donor details.</div>
-								) : (
-									<>
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 text-sm">
-											<div><span className="font-semibold text-gray-600">Name:</span> <span className="text-gray-800">{donorDetails.name || '-'}</span></div>
-											<div><span className="font-semibold text-gray-600">Phone:</span> <span className="text-gray-800">{donorDetails.phone || '-'}</span></div>
-											<div><span className="font-semibold text-gray-600">Email:</span> <span className="text-gray-800">{donorDetails.email || '-'}</span></div>
-											<div><span className="font-semibold text-gray-600">Date of Birth:</span> <span className="text-gray-800">{formatDate(donorDetails.date_of_birth)}</span></div>
-											<div><span className="font-semibold text-gray-600">Anniversary:</span> <span className="text-gray-800">{formatDate(donorDetails.anniversary_date)}</span></div>
-											<div className="break-words"><span className="font-semibold text-gray-600">Address:</span> <span className="text-gray-800">{buildAddress(donorDetails) || '-'}</span></div>
-										</div>
+			{detailsModalOpen && (
+				<div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+					<div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[85vh] overflow-hidden">
+						<div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-blue-50">
+							<h3 className="text-lg font-bold text-gray-800">Donor Complete Details</h3>
+							<button onClick={() => setDetailsModalOpen(false)} className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition">&times;</button>
+						</div>
+						<div className="p-4 sm:p-6 overflow-y-auto" style={{ maxHeight: 'calc(85vh - 64px)' }}>
+							{detailsLoading ? (
+								<div className="text-center text-gray-500 py-8">Loading details...</div>
+							) : !donorDetails ? (
+								<div className="text-center text-red-500 py-8">Failed to load donor details.</div>
+							) : (
+								<>
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 text-sm">
+										<div><span className="font-semibold text-gray-600">Name:</span> <span className="text-gray-800">{donorDetails.name || '-'}</span></div>
+										<div><span className="font-semibold text-gray-600">Phone:</span> <span className="text-gray-800">{donorDetails.phone || '-'}</span></div>
+										<div><span className="font-semibold text-gray-600">Email:</span> <span className="text-gray-800">{donorDetails.email || '-'}</span></div>
+										<div><span className="font-semibold text-gray-600">Date of Birth:</span> <span className="text-gray-800">{formatDate(donorDetails.date_of_birth)}</span></div>
+										<div><span className="font-semibold text-gray-600">Anniversary:</span> <span className="text-gray-800">{formatDate(donorDetails.anniversary_date)}</span></div>
+										<div className="break-words"><span className="font-semibold text-gray-600">Address:</span> <span className="text-gray-800">{buildAddress(donorDetails) || '-'}</span></div>
+									</div>
 
-										<div>
-											<h4 className="text-base font-bold text-gray-800 mb-3">Family Members</h4>
-											{Array.isArray(donorDetails.family_members) && donorDetails.family_members.length > 0 ? (
-												<div className="overflow-x-auto">
+									<div>
+										<h4 className="text-base font-bold text-gray-800 mb-3">Family Members</h4>
+										{Array.isArray(donorDetails.family_members) && donorDetails.family_members.length > 0 ? (
+											<div className="overflow-x-auto">
 												<table className="w-full min-w-[480px] text-sm border border-gray-200 rounded-lg overflow-hidden">
 													<thead className="bg-gray-50">
 														<tr>
@@ -441,17 +448,17 @@ function Dashboard() {
 														))}
 													</tbody>
 												</table>
-												</div>
-											) : (
-												<div className="text-sm text-gray-500">No family members added.</div>
-											)}
-										</div>
-									</>
-								)}
-							</div>
+											</div>
+										) : (
+											<div className="text-sm text-gray-500">No family members added.</div>
+										)}
+									</div>
+								</>
+							)}
 						</div>
 					</div>
-				)}
+				</div>
+			)}
 		</DashboardLayout>
 	);
 }

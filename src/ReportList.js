@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import DashboardLayout from './DashboardLayout';
 
 function isAuthenticated() {
@@ -90,7 +90,7 @@ function ReportList() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `donations.${type === 'xls' ? 'xlsx' : 'pdf'}`;
+        a.download = `donations.${type === 'xls' ? 'xlsx' : type}`;
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -189,6 +189,10 @@ function ReportList() {
               onClick={() => handleExport('xls')}
               className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-semibold text-sm"
             >Export Excel</button>
+            <button
+              onClick={() => handleExport('csv')}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-semibold text-sm"
+            >Export CSV</button>
             <button
               onClick={() => handleExport('pdf')}
               className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-semibold text-sm"
