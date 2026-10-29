@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
 
 const BATCH_SIZE = 500;
@@ -50,18 +50,22 @@ export default function ImportDonors({ onImport }) {
         'Address Pin': 'address_pin',
         'address_line1': 'address_line1',
         'Address Line 1': 'address_line1',
+        'Address Line 1 (Flat / Door / Building)': 'address_line1',
         'address_line2': 'address_line2',
         'Address Line 2': 'address_line2',
+        'Address Line 2 (Road / Street / Block / Sector)': 'address_line2',
         'post_office': 'post_office',
         'Post Office': 'post_office',
         'city': 'city',
         'City': 'city',
+        'City (Area / Locality)': 'city',
         'district': 'district',
         'District': 'district',
         'state': 'state',
         'State': 'state',
         'pin_code': 'pin_code',
         'PIN Code': 'pin_code',
+        'PIN Code (6 Digits)': 'pin_code',
         'PIN': 'pin_code',
         'country': 'country',
         'Country': 'country',
@@ -72,10 +76,14 @@ export default function ImportDonors({ onImport }) {
         'Last Gift': 'last_gift_details',
         'Last Gift Details': 'last_gift_details',
       };
+      const normalizeHeader = key => key.trim().toLowerCase().replace(/[\s_-]+/g, '');
+      const normalizedHeaderMap = Object.fromEntries(
+        Object.entries(headerMap).map(([header, column]) => [normalizeHeader(header), column])
+      );
       const rows = rawRows.map(row => {
         const mapped = {};
         for (const key of Object.keys(row)) {
-          const dbCol = headerMap[key] || headerMap[key.trim()] || key.toLowerCase().replace(/\s+/g, '_');
+          const dbCol = normalizedHeaderMap[normalizeHeader(key)] || key.trim().toLowerCase().replace(/\s+/g, '_');
           if (dbCol !== 'id') {
             let val = row[key];
             // Convert Excel Date objects to YYYY-MM-DD strings.
@@ -130,7 +138,7 @@ export default function ImportDonors({ onImport }) {
       if (totalFailed > 0) parts.push(`${totalFailed} failed`);
       const message = rows.length === 0 ? 'No rows found.' :
         totalInserted === rows.length ? 'All rows inserted successfully.' :
-        parts.join(', ') + '.';
+          parts.join(', ') + '.';
 
       const aggregated = { message, inserted: totalInserted, failed: totalFailed, updated: totalUpdated, details: allDetails };
       console.log('--- ImportDonors: Aggregated result ---', aggregated);

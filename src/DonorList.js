@@ -5,6 +5,7 @@ import DashboardLayout from './DashboardLayout';
 import DonorEdit from './DonorEdit';
 import DonorForm from './DonorForm';
 import ImportDonors from './ImportDonors';
+import { buildAddress } from './donorAddress';
 
 function isAuthenticated() {
 	return !!localStorage.getItem('token');
@@ -127,9 +128,10 @@ function DonorList() {
 			'Anniversary': formatDateDisplay(d.anniversary_date),
 			'PAN Card': d.pan_card || '',
 			'Cultivator': d.cultivator_name || '',
-			'Address': d.address || '',
-			'City': d.city || '',
-			'State': d.state || '',
+			'Address': buildAddress(d),
+			'City': d.city || d.address_city || '',
+			'State': d.state || d.address_state || '',
+			'PIN Code': d.pin_code || d.address_pin || '',
 		}));
 		const ws = XLSX.utils.json_to_sheet(rows);
 		const wb = XLSX.utils.book_new();
