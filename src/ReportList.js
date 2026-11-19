@@ -24,11 +24,38 @@ function ReportList() {
   const [amountMin, setAmountMin] = useState('');
   const [amountMax, setAmountMax] = useState('');
   const [scheme, setScheme] = useState('');
+  const [schemes, setSchemes] = useState([]);
+  const [schemeError, setSchemeError] = useState('');
+  const [schemesLoading, setSchemesLoading] = useState(true);
   const [reportMode, setReportMode] = useState('individual');
   const [pageSize, setPageSize] = useState(20);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
+
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      setSchemesLoading(false);
+      return;
+    }
+    let active = true;
+    const token = localStorage.getItem('token');
+    fetch(`${API_URL}/api/report/schemes`, { headers: { Authorization: 'Bearer ' + token } })
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to load schemes');
+        return res.json();
+      })
+      .then(data => {
+        if (active) setSchemes(Array.isArray(data.data) ? data.data : []);
+      })
+      .catch(() => {
+        if (active) setSchemeError('Failed to load schemes. Refresh the page to try again.');
+      })
+      .finally(() => {
+        if (active) setSchemesLoading(false);
+      });
+    return () => { active = false; };
+  }, [API_URL]);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -55,7 +82,10 @@ function ReportList() {
     if (dateTo) params.set('dateTo', dateTo);
     if (amountMin !== '') params.set('amountMin', amountMin);
     if (amountMax !== '') params.set('amountMax', amountMax);
-    if (scheme) params.set('scheme', scheme);
+    if (scheme) {
+      params.set('scheme', scheme);
+      params.set('schemeMatch', 'exact');
+    }
 
     fetch(`${API_URL}/api/report/donations?${params.toString()}`, {
       headers: { Authorization: 'Bearer ' + token }
@@ -103,7 +133,10 @@ function ReportList() {
     if (dateTo) params.set('dateTo', dateTo);
     if (amountMin !== '') params.set('amountMin', amountMin);
     if (amountMax !== '') params.set('amountMax', amountMax);
-    if (scheme) params.set('scheme', scheme);
+    if (scheme) {
+      params.set('scheme', scheme);
+      params.set('schemeMatch', 'exact');
+    }
     params.set('mode', reportMode);
 
     const reportEndpoint = reportType === 'birthdays' ? 'birthdays' : 'donations';
@@ -151,121 +184,125 @@ function ReportList() {
         </div>
 
         {reportType === 'donations' && <>
-        {/* Filters & Export */}
-        <div className="bg-white rounded-lg shadow p-4 mb-6 flex flex-wrap items-end gap-4">
-          <div>
-            <label className="block text-sm font-semibold text-gray-600 mb-1">Mode</label>
-            <select
-              value={reportMode}
-              onChange={e => { setReportMode(e.target.value); setCurrentPage(1); }}
-              className="border rounded px-3 py-2 text-sm"
-            >
-              <option value="individual">Individual Donations</option>
-              <option value="aggregate">Aggregate by Phone</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-600 mb-1">From Date</label>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={e => { setDateFrom(e.target.value); setCurrentPage(1); }}
-              className="border rounded px-3 py-2 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-600 mb-1">To Date</label>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={e => { setDateTo(e.target.value); setCurrentPage(1); }}
-              className="border rounded px-3 py-2 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-600 mb-1">Min Amount</label>
-            <input
-              type="number"
-              value={amountMin}
-              onChange={e => { setAmountMin(e.target.value); setCurrentPage(1); }}
-              className="border rounded px-3 py-2 text-sm w-28"
-              placeholder="₹ Min"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-600 mb-1">Max Amount</label>
-            <input
-              type="number"
-              value={amountMax}
-              onChange={e => { setAmountMax(e.target.value); setCurrentPage(1); }}
-              className="border rounded px-3 py-2 text-sm w-28"
-              placeholder="₹ Max"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-600 mb-1">Scheme</label>
-            <input
-              type="text"
-              value={scheme}
-              onChange={e => { setScheme(e.target.value); setCurrentPage(1); }}
-              className="border rounded px-3 py-2 text-sm w-32"
-              placeholder="Scheme name"
-            />
-          </div>
-          <button
-            onClick={() => { setDateFrom(''); setDateTo(''); setAmountMin(''); setAmountMax(''); setScheme(''); setCurrentPage(1); }}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded text-sm font-semibold"
-          >Clear Filters</button>
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-semibold text-gray-600">Show:</label>
-            <select
-              value={pageSize}
-              onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
-              className="border rounded px-2 py-1 text-sm"
-            >
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-              <option value={200}>200</option>
-            </select>
-          </div>
-          <div className="w-full sm:w-auto sm:ml-auto flex gap-2 flex-wrap sm:flex-nowrap">
+          {/* Filters & Export */}
+          <div className="bg-white rounded-lg shadow p-4 mb-6 flex flex-wrap items-end gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1">Mode</label>
+              <select
+                value={reportMode}
+                onChange={e => { setReportMode(e.target.value); setCurrentPage(1); }}
+                className="border rounded px-3 py-2 text-sm"
+              >
+                <option value="individual">Individual Donations</option>
+                <option value="aggregate">Aggregate by Phone</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1">From Date</label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={e => { setDateFrom(e.target.value); setCurrentPage(1); }}
+                className="border rounded px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1">To Date</label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={e => { setDateTo(e.target.value); setCurrentPage(1); }}
+                className="border rounded px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1">Min Amount</label>
+              <input
+                type="number"
+                value={amountMin}
+                onChange={e => { setAmountMin(e.target.value); setCurrentPage(1); }}
+                className="border rounded px-3 py-2 text-sm w-28"
+                placeholder="₹ Min"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1">Max Amount</label>
+              <input
+                type="number"
+                value={amountMax}
+                onChange={e => { setAmountMax(e.target.value); setCurrentPage(1); }}
+                className="border rounded px-3 py-2 text-sm w-28"
+                placeholder="₹ Max"
+              />
+            </div>
+            <div>
+              <label htmlFor="report-scheme" className="block text-sm font-semibold text-gray-600 mb-1">Scheme</label>
+              <select
+                id="report-scheme"
+                value={scheme}
+                onChange={e => { setScheme(e.target.value); setCurrentPage(1); }}
+                disabled={schemesLoading || !!schemeError}
+                className="border rounded px-3 py-2 text-sm max-w-full w-48"
+              >
+                <option value="">{schemesLoading ? 'Loading schemes...' : 'All Schemes'}</option>
+                {schemes.map(item => <option key={item.id} value={item.name}>{item.name}</option>)}
+              </select>
+              {schemeError && <p role="alert" className="text-red-700 text-sm mt-1">{schemeError}</p>}
+            </div>
             <button
-              onClick={() => handleExport('xls')}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-semibold text-sm"
-            >Export Excel</button>
-            <button
-              onClick={() => handleExport('csv')}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-semibold text-sm"
-            >Export CSV</button>
-            <button
-              onClick={() => handleExport('pdf')}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-semibold text-sm"
-            >Export PDF</button>
+              onClick={() => { setDateFrom(''); setDateTo(''); setAmountMin(''); setAmountMax(''); setScheme(''); setCurrentPage(1); }}
+              className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded text-sm font-semibold"
+            >Clear Filters</button>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-semibold text-gray-600">Show:</label>
+              <select
+                value={pageSize}
+                onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                className="border rounded px-2 py-1 text-sm"
+              >
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value={200}>200</option>
+              </select>
+            </div>
+            <div className="w-full sm:w-auto sm:ml-auto flex gap-2 flex-wrap sm:flex-nowrap">
+              <button
+                onClick={() => handleExport('xls')}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-semibold text-sm"
+              >Export Excel</button>
+              <button
+                onClick={() => handleExport('csv')}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-semibold text-sm"
+              >Export CSV</button>
+              <button
+                onClick={() => handleExport('pdf')}
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-semibold text-sm"
+              >Export PDF</button>
+            </div>
           </div>
-        </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white rounded-lg shadow p-4 text-center">
-            <div className="text-sm text-gray-500 font-semibold">
-              {reportMode === 'aggregate' ? 'Total Phones' : 'Total Donations'}
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="bg-white rounded-lg shadow p-4 text-center">
+              <div className="text-sm text-gray-500 font-semibold">
+                {reportMode === 'aggregate' ? 'Total Phones' : 'Total Donations'}
+              </div>
+              <div className="text-2xl font-bold text-blue-700">{totalRecords}</div>
             </div>
-            <div className="text-2xl font-bold text-blue-700">{totalRecords}</div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-4 text-center">
-            <div className="text-sm text-gray-500 font-semibold">Page Amount</div>
-            <div className="text-2xl font-bold text-green-700">₹{totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-4 text-center">
-            <div className="text-sm text-gray-500 font-semibold">
-              {reportMode === 'aggregate' ? 'Page Avg Per Phone' : 'Page Average Donation'}
+            <div className="bg-white rounded-lg shadow p-4 text-center">
+              <div className="text-sm text-gray-500 font-semibold">Page Amount</div>
+              <div className="text-2xl font-bold text-green-700">₹{totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
             </div>
-            <div className="text-2xl font-bold text-purple-700">
-              ₹{visibleRows.length ? (totalAmount / visibleRows.length).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '0.00'}
+            <div className="bg-white rounded-lg shadow p-4 text-center">
+              <div className="text-sm text-gray-500 font-semibold">
+                {reportMode === 'aggregate' ? 'Page Avg Per Phone' : 'Page Average Donation'}
+              </div>
+              <div className="text-2xl font-bold text-purple-700">
+                ₹{visibleRows.length ? (totalAmount / visibleRows.length).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '0.00'}
+              </div>
             </div>
           </div>
-        </div>
         </>}
 
         {reportType === 'birthdays' && (
