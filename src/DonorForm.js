@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 
-function DonorForm({ onSuccess }) {
+function DonorForm({ onSuccess, isCultivator = false, cultivatorId }) {
 	const API_URL = process.env.REACT_APP_API_URL;
-	const [form, setForm] = useState({
+	const [form, setForm] = useState(() => ({
 		name: '',
 		initiated_name: '',
 		email: '',
@@ -22,9 +22,9 @@ function DonorForm({ onSuccess }) {
 		state: '',
 		pin_code: '',
 		country: '',
-		cultivator_id: '',
+		cultivator_id: isCultivator ? String(cultivatorId || '') : '',
 		last_gift_details: ''
-	});
+	}));
 	const [cultivators, setCultivators] = useState([]);
 	const [wife, setWife] = useState({ name: '', date_of_birth: '' });
 	const [children, setChildren] = useState([{ name: '', date_of_birth: '' }]);
@@ -49,8 +49,8 @@ function DonorForm({ onSuccess }) {
 				setCultivators([]);
 			}
 		}
-		fetchCultivators();
-	}, [API_URL]);
+		if (!isCultivator) fetchCultivators();
+	}, [API_URL, isCultivator]);
 	const handleWifeChange = e => {
 		setWife({ ...wife, [e.target.name]: e.target.value });
 	};
@@ -155,7 +155,7 @@ function DonorForm({ onSuccess }) {
 									<label className="block mb-2 font-semibold text-gray-700">PAN Card</label>
 									<input name="pan_card" value={form.pan_card} onChange={handleChange} placeholder="PAN Card" className="border p-2 rounded w-full" />
 								</div>
-								<div>
+								{!isCultivator && <div>
 									<label className="block mb-2 font-semibold text-gray-700">Cultivator</label>
 									<select
 										name="cultivator_id"
@@ -169,7 +169,7 @@ function DonorForm({ onSuccess }) {
 											<option key={c.id} value={c.id}>{c.name}</option>
 										))}
 									</select>
-								</div>
+								</div>}
 								<div>
 									<label className="block mb-2 font-semibold text-gray-700">Last Gift Details</label>
 									<input name="last_gift_details" value={form.last_gift_details} onChange={handleChange} placeholder="Last Gift Details" className="border p-2 rounded w-full" />
@@ -253,13 +253,13 @@ function DonorForm({ onSuccess }) {
 						</div>
 					</div>
 					<div className="flex gap-4 flex-wrap justify-end">
-					<button type="submit" className="bg-green-600 text-white py-2 px-6 rounded font-semibold hover:bg-green-700 transition disabled:opacity-60" disabled={loading}>
-						{loading ? (
-							<span className="flex items-center gap-2">
-								<svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-								Adding...
-							</span>
-						) : 'Add Donor'}
+						<button type="submit" className="bg-green-600 text-white py-2 px-6 rounded font-semibold hover:bg-green-700 transition disabled:opacity-60" disabled={loading}>
+							{loading ? (
+								<span className="flex items-center gap-2">
+									<svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+									Adding...
+								</span>
+							) : 'Add Donor'}
 						</button>
 					</div>
 				</form>

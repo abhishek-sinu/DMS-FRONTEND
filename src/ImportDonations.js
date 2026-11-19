@@ -31,6 +31,7 @@ export default function ImportDonations({ onImport }) {
         'amount': 'amount',
         'scheme_name': 'scheme_name',
         'mode_of_payment': 'mode_of_payment',
+        'comments': 'comments',
         // Common Excel-friendly header names
         'Receipt Number': 'receipt_number',
         'Phone Number': 'phone_number',
@@ -41,6 +42,7 @@ export default function ImportDonations({ onImport }) {
         'Scheme Name': 'scheme_name',
         'Mode Of Payment': 'mode_of_payment',
         'Mode of Payment': 'mode_of_payment',
+        'Comments': 'comments',
       };
       const rows = rawRows.map(row => {
         const mapped = {};
@@ -81,7 +83,7 @@ export default function ImportDonations({ onImport }) {
         batches.push(rows.slice(i, i + BATCH_SIZE));
       }
 
-      let totalInserted = 0, totalFailed = 0, totalSkipped = 0, totalNewDonors = 0;
+      let totalInserted = 0, totalUpdated = 0, totalFailed = 0, totalSkipped = 0, totalNewDonors = 0;
       const allDetails = [];
       let rowOffset = 0;
 
@@ -114,6 +116,7 @@ export default function ImportDonations({ onImport }) {
             })));
           } else {
             totalInserted += result.inserted || 0;
+            totalUpdated += result.updated || 0;
             totalFailed += result.failed || 0;
             totalSkipped += result.skipped || 0;
             totalNewDonors += result.newDonors || 0;
@@ -135,12 +138,13 @@ export default function ImportDonations({ onImport }) {
       setBatchProgress(null);
       const parts = [];
       if (totalInserted > 0) parts.push(`${totalInserted} inserted`);
+      if (totalUpdated > 0) parts.push(`${totalUpdated} updated`);
       if (totalNewDonors > 0) parts.push(`${totalNewDonors} new donor(s) created`);
       if (totalSkipped > 0) parts.push(`${totalSkipped} skipped (missing required fields)`);
       if (totalFailed > 0) parts.push(`${totalFailed} failed`);
       const message = rows.length === 0 ? 'No rows found.' : parts.length ? parts.join(', ') + '.' : 'No rows processed.';
 
-      const aggregated = { message, inserted: totalInserted, failed: totalFailed, skipped: totalSkipped, newDonors: totalNewDonors, details: allDetails };
+      const aggregated = { message, inserted: totalInserted, updated: totalUpdated, failed: totalFailed, skipped: totalSkipped, newDonors: totalNewDonors, details: allDetails };
       setImportResult(aggregated);
       if (onImport) onImport();
     } catch (err) {
@@ -162,9 +166,10 @@ export default function ImportDonations({ onImport }) {
         'Transaction Date': original.transaction_date || '',
         'Instrument Number': original.instrument_number || '',
         'Donor Name': original.donor_name || '',
-        'Amount': original.amount || '',
+        'Amount': original.amount ?? '',
         'Scheme Name': original.scheme_name || '',
         'Mode Of Payment': original.mode_of_payment || '',
+        'Comments': original.comments || '',
         'Status': r.status,
         'Reason': r.reason || 'Skipped',
       };
@@ -186,6 +191,7 @@ export default function ImportDonations({ onImport }) {
         'Amount': 2000,
         'Scheme Name': 'Scheme A1',
         'Mode Of Payment': 'online',
+        'Comments': '',
       },
     ];
     const ws = XLSX.utils.json_to_sheet(sampleData);

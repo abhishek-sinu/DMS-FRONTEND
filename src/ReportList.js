@@ -15,6 +15,8 @@ function formatDate(dateStr) {
 function ReportList() {
   const API_URL = process.env.REACT_APP_API_URL;
   const [donations, setDonations] = useState([]);
+  const [birthdays, setBirthdays] = useState([]);
+  const [reportType, setReportType] = useState('donations');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [dateFrom, setDateFrom] = useState('');
@@ -34,8 +36,12 @@ function ReportList() {
       setLoading(false);
       return;
     }
-    fetchReportData();
-  }, [dateFrom, dateTo, amountMin, amountMax, scheme, reportMode, currentPage, pageSize]);
+    if (reportType === 'birthdays') {
+      fetchBirthdayData();
+    } else {
+      fetchReportData();
+    }
+  }, [reportType, dateFrom, dateTo, amountMin, amountMax, scheme, reportMode, currentPage, pageSize]);
 
   const fetchReportData = () => {
     setLoading(true);
@@ -52,7 +58,7 @@ function ReportList() {
     if (scheme) params.set('scheme', scheme);
 
     fetch(`${API_URL}/api/report/donations?${params.toString()}`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: 'Bearer ' + token }
     })
       .then(res => res.json())
       .then(data => {
@@ -66,6 +72,27 @@ function ReportList() {
         setLoading(false);
       });
   };
+
+  const fetchBirthdayData = () => {
+    setLoading(true);
+    const token = localStorage.getItem('token');
+    fetch(`${API_URL}/api/report/birthdays`, {
+      headers: { Authorization: 'Bearer ' + token }
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch birthday report');
+        return res.json();
+      })
+      .then(data => {
+        setBirthdays(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError('Failed to fetch birthday report');
+        setLoading(false);
+      });
+  };
+
   const visibleRows = donations;
   const totalAmount = visibleRows.reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0);
 
@@ -79,8 +106,12 @@ function ReportList() {
     if (scheme) params.set('scheme', scheme);
     params.set('mode', reportMode);
 
-    fetch(`${API_URL}/api/report/donations/${type}?${params.toString()}`, {
-      headers: { Authorization: `Bearer ${token}` }
+    const reportEndpoint = reportType === 'birthdays' ? 'birthdays' : 'donations';
+    const filename = reportType === 'birthdays' ? 'birthdays' : 'donations';
+    const exportUrl = API_URL + '/api/report/' + reportEndpoint + '/' + type;
+    const requestUrl = reportType === 'birthdays' ? exportUrl : exportUrl + '?' + params.toString();
+    fetch(requestUrl, {
+      headers: { Authorization: 'Bearer ' + token }
     })
       .then(res => {
         if (!res.ok) throw new Error('Export failed');
@@ -90,7 +121,7 @@ function ReportList() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `donations.${type === 'xls' ? 'xlsx' : type}`;
+        a.download = `${filename}.${type === 'xls' ? 'xlsx' : type}`;
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -106,6 +137,20 @@ function ReportList() {
 
         {error && <div className="bg-red-100 text-red-700 px-4 py-2 rounded mb-4">{error}</div>}
 
+        <div className="flex gap-2 mb-6">
+          <button
+            type="button"
+            onClick={() => { setReportType('donations'); setCurrentPage(1); setError(''); }}
+            className={`px-4 py-2 rounded font-semibold ${reportType === 'donations' ? 'bg-blue-700 text-white' : 'bg-white text-blue-700 border'}`}
+          >Donation Reports</button>
+          <button
+            type="button"
+            onClick={() => { setReportType('birthdays'); setCurrentPage(1); setError(''); }}
+            className={`px-4 py-2 rounded font-semibold ${reportType === 'birthdays' ? 'bg-blue-700 text-white' : 'bg-white text-blue-700 border'}`}
+          >Birthday Reports</button>
+        </div>
+
+        {reportType === 'donations' && <>
         {/* Filters & Export */}
         <div className="bg-white rounded-lg shadow p-4 mb-6 flex flex-wrap items-end gap-4">
           <div>
@@ -221,8 +266,25 @@ function ReportList() {
             </div>
           </div>
         </div>
+        </>}
 
-        {/* Donations Table */}
+        {reportType === 'birthdays' && (
+          <div className="bg-white rounded-lg shadow p-4 mb-6">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-blue-800">Upcoming Birthdays</h2>
+                <p className="text-sm text-gray-500">Donors and their family members with birthdays in the next 30 days.</p>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => handleExport('xls')} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-semibold text-sm">Export Excel</button>
+                <button onClick={() => handleExport('csv')} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-semibold text-sm">Export CSV</button>
+                <button onClick={() => handleExport('pdf')} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-semibold text-sm">Export PDF</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reports Table */}
         <div className="bg-white rounded-lg shadow overflow-x-auto">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
@@ -233,6 +295,35 @@ function ReportList() {
               </div>
               <p className="text-blue-700 font-semibold text-base tracking-wide animate-pulse">Loading report...</p>
             </div>
+          ) : reportType === 'birthdays' ? (
+            birthdays.length === 0 ? (
+              <div className="p-8 text-center text-gray-400">No upcoming birthdays found for your donors.</div>
+            ) : (
+              <table className="w-full min-w-[700px] text-sm">
+                <thead>
+                  <tr className="bg-blue-50 text-blue-800">
+                    <th className="px-4 py-3 text-left">#</th>
+                    <th className="px-4 py-3 text-left">Donor</th>
+                    <th className="px-4 py-3 text-left">Person</th>
+                    <th className="px-4 py-3 text-left">Relation</th>
+                    <th className="px-4 py-3 text-left">Birthday</th>
+                    <th className="px-4 py-3 text-left">Phone</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {birthdays.map((birthday, index) => (
+                    <tr key={`${birthday.donor_name}-${birthday.person_type}-${birthday.family_member || index}`} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="px-4 py-2">{index + 1}</td>
+                      <td className="px-4 py-2">{birthday.donor_name || '-'}</td>
+                      <td className="px-4 py-2">{birthday.family_member || birthday.donor_name || '-'}</td>
+                      <td className="px-4 py-2">{birthday.relationship || '-'}</td>
+                      <td className="px-4 py-2">{formatDate(birthday.birthday)}</td>
+                      <td className="px-4 py-2">{birthday.phone || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )
           ) : visibleRows.length === 0 ? (
             <div className="p-8 text-center text-gray-400">No donations found for the selected filters.</div>
           ) : (
@@ -295,7 +386,7 @@ function ReportList() {
           )}
         </div>
 
-        {totalRecords > 0 && (
+        {reportType === 'donations' && totalRecords > 0 && (
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4">
             <span className="text-sm text-gray-600">
               Showing {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, totalRecords)} of {totalRecords}

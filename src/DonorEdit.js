@@ -26,7 +26,7 @@ function prepareDonorForEdit(donor) {
 	};
 }
 
-function DonorEdit({ donor, onSuccess, onCancel }) {
+function DonorEdit({ donor, onSuccess, onCancel, isCultivator = false }) {
 	const API_URL = process.env.REACT_APP_API_URL;
 	const [form, setForm] = useState(() => prepareDonorForEdit(donor));
 	const [wife, setWife] = useState({ name: '', date_of_birth: '' });
@@ -70,8 +70,8 @@ function DonorEdit({ donor, onSuccess, onCancel }) {
 			}
 		}
 		fetchDonorDetails();
-		fetchCultivators();
-	}, [donor.id, API_URL]);
+		if (!isCultivator) fetchCultivators();
+	}, [donor.id, API_URL, isCultivator]);
 
 	const handleChange = e => {
 		setForm({ ...form, [e.target.name]: e.target.value });
@@ -194,7 +194,7 @@ function DonorEdit({ donor, onSuccess, onCancel }) {
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
 								<div>
 									<label className="block mb-2 font-semibold text-gray-700">Name</label>
-									<input name="name" value={form.name} onChange={handleChange} placeholder="Name" className="border p-2 rounded w-full" required />
+									<input name="name" value={form.name} onChange={handleChange} placeholder="Name" className="border p-2 rounded w-full" required readOnly={isCultivator} />
 								</div>
 								<div>
 									<label className="block mb-2 font-semibold text-gray-700">Initiated Name (Optional)</label>
@@ -206,7 +206,7 @@ function DonorEdit({ donor, onSuccess, onCancel }) {
 								</div>
 								<div>
 									<label className="block mb-2 font-semibold text-gray-700">Phone</label>
-									<input name="phone" value={form.phone} onChange={handleChange} placeholder="Phone" className="border p-2 rounded w-full" required />
+									<input name="phone" value={form.phone} onChange={handleChange} placeholder="Phone" className="border p-2 rounded w-full" required readOnly={isCultivator} />
 								</div>
 								<div>
 									<label className="block mb-2 font-semibold text-gray-700">Date of Birth</label>
@@ -256,9 +256,9 @@ function DonorEdit({ donor, onSuccess, onCancel }) {
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
 									<div>
 										<label className="block mb-2 font-semibold text-gray-700">PAN Card</label>
-										<input name="pan_card" value={form.pan_card || ''} onChange={handleChange} placeholder="PAN Card" className="border p-2 rounded w-full" />
+										<input name="pan_card" value={form.pan_card || ''} onChange={handleChange} placeholder="PAN Card" className="border p-2 rounded w-full" readOnly={isCultivator} />
 									</div>
-									<div>
+									{!isCultivator && <div>
 										<label className="block mb-2 font-semibold text-gray-700">Cultivator</label>
 										<select
 											name="cultivator_id"
@@ -272,7 +272,7 @@ function DonorEdit({ donor, onSuccess, onCancel }) {
 												<option key={c.id} value={c.id}>{c.name}</option>
 											))}
 										</select>
-									</div>
+									</div>}
 									<div>
 										<label className="block mb-2 font-semibold text-gray-700">Last Gift Details</label>
 										<input name="last_gift_details" value={form.last_gift_details || ''} onChange={handleChange} placeholder="Last Gift Details" className="border p-2 rounded w-full" />

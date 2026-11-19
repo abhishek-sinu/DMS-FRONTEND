@@ -1,7 +1,6 @@
-import React, { act } from 'react';
+import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Simulate } from 'react-dom/test-utils';
-import * as XLSX from 'xlsx';
 import DonationList from './DonationList';
 
 jest.mock('./DashboardLayout', () => ({ children }) => <div>{children}</div>);
@@ -9,14 +8,17 @@ jest.mock('./DonationForm', () => () => null);
 jest.mock('./DonationEdit', () => () => null);
 jest.mock('./ImportDonations', () => () => <div>Import Donations</div>);
 jest.mock('./receiptTemplate', () => ({ downloadDonationReceipt: jest.fn() }));
-jest.mock('xlsx', () => ({ ...jest.requireActual('xlsx'), writeFile: jest.fn() }));
 
 describe('Donation table export', () => {
   let container;
   let root;
   let originalFetch;
   let exportRequests;
-  let failPage;
+  let downloadClick;
+  let failure;
+  let pending;
+  let originalCreateURL;
+  let originalRevokeURL;
   let empty;
   const donation = {
     id: 1, receipt_number: '001', phone_number: '0123456789',
@@ -26,28 +28,40 @@ describe('Donation table export', () => {
   };
 
   beforeEach(async () => {
+    jest.useFakeTimers();
     global.IS_REACT_ACT_ENVIRONMENT = true;
     originalFetch = global.fetch;
     exportRequests = [];
-    failPage = 0;
+    failure = false;
+    pending = false;
     empty = false;
-    XLSX.writeFile.mockClear();
+    originalCreateURL = URL.createObjectURL;
+    originalRevokeURL = URL.revokeObjectURL;
+    URL.createObjectURL = jest.fn(() => 'blob:export');
+    URL.revokeObjectURL = jest.fn();
+    downloadClick = jest.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => { });
     localStorage.setItem('token', 'test-token');
     global.fetch = jest.fn(async (url, options) => {
       if (url.includes('/api/temple-settings')) return { ok: true, json: async () => ({ data: {} }) };
       const params = new URL(url, 'http://localhost').searchParams;
-      const page = Number(params.get('page'));
-      if (params.get('limit') === '200') {
-        exportRequests.push({ params, options });
-        if (page === failPage) return { ok: false };
-        return { ok: true, json: async () => ({
-          items: empty ? [] : [{ ...donation, id: page, donor_name: page === 2 ? '=Unsafe, "Name"' : donation.donor_name }],
-          pagination: { totalPages: empty ? 0 : 2 },
-        }) };
+      if (url.includes('/export/')) {
+        exportRequests.push({ url, params, options });
+        if (pending) return new Promise((resolve, reject) => {
+          options.signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+        });
+        if (failure || empty) return {
+          ok: false, json: async () => ({
+            error: empty
+              ? 'No donations match the current search.' : 'Export failed. Please try again.'
+          })
+        };
+        return { ok: true, blob: async () => new Blob(['exported file']) };
       }
-      return { ok: true, json: async () => ({
-        items: [donation], pagination: { totalPages: 1, total: 1 },
-      }) };
+      return {
+        ok: true, json: async () => ({
+          items: [donation], pagination: { totalPages: 1, total: 1 },
+        })
+      };
     });
     container = document.createElement('div');
     document.body.appendChild(container);
@@ -57,9 +71,14 @@ describe('Donation table export', () => {
 
   afterEach(async () => {
     await act(async () => root.unmount());
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
     container.remove();
     localStorage.clear();
     global.fetch = originalFetch;
+    URL.createObjectURL = originalCreateURL;
+    URL.revokeObjectURL = originalRevokeURL;
+    downloadClick.mockRestore();
     delete global.IS_REACT_ACT_ENVIRONMENT;
   });
 
@@ -68,49 +87,75 @@ describe('Donation table export', () => {
     await act(async () => button.click());
   }
 
-  test.each(['XLS', 'CSV'])('exports all pages in %s with current search and table columns', async (format) => {
+  test.each(['XLSX', 'CSV'])('downloads %s with one authenticated request and current search', async (format) => {
     await act(async () => Simulate.change(container.querySelector('input'), { target: { value: 'Cash & General' } }));
     await clickExport(format);
-    expect(exportRequests).toHaveLength(2);
-    exportRequests.forEach(({ params, options }, index) => {
-      expect(params.get('page')).toBe(String(index + 1));
-      expect(params.get('search')).toBe('Cash & General');
-      expect(options.headers.Authorization).toBe('Bearer test-token');
-    });
-    expect(XLSX.writeFile).toHaveBeenCalledTimes(1);
-    const [workbook, filename, options] = XLSX.writeFile.mock.calls[0];
-    expect(filename).toBe(`donations_filtered.${format.toLowerCase()}`);
-    expect(options.bookType).toBe(format === 'XLS' ? 'biff8' : 'csv');
-    const rows = XLSX.utils.sheet_to_json(workbook.Sheets.Donations);
-    expect(rows).toHaveLength(2);
-    expect(Object.keys(rows[0])).toEqual([
-      'Receipt Number', 'Phone Number', 'Transaction Date', 'Instrument Number',
-      'Donor Name', 'Amount', 'Scheme Name', 'Mode Of Payment',
-    ]);
-    expect(rows[0]).toMatchObject({
-      'Receipt Number': '001', 'Phone Number': '0123456789',
-      'Instrument Number': '000123456789123456', 'Transaction Date': '17-10-2026', Amount: 12.5,
-    });
-    // Verify the chosen format can serialize and be read back as a real file.
-    const bytes = XLSX.write(workbook, { ...options, type: 'buffer' });
-    const roundTrip = XLSX.read(bytes, { type: 'buffer' });
-    const exportedRows = XLSX.utils.sheet_to_json(roundTrip.Sheets[roundTrip.SheetNames[0]], { raw: false });
-    expect(exportedRows).toHaveLength(2);
-    expect(exportedRows[1]['Donor Name']).toBe(format === 'CSV' ? '\'=Unsafe, "Name"' : '=Unsafe, "Name"');
+    expect(exportRequests).toHaveLength(1);
+    const { url, params, options } = exportRequests[0];
+    expect(url).toContain(`/api/donations/export/${format.toLowerCase()}?`);
+    expect(params.get('search')).toBe('Cash & General');
+    expect(params.has('page')).toBe(false);
+    expect(options.headers.Authorization).toBe('Bearer test-token');
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
+    expect(downloadClick).toHaveBeenCalledTimes(1);
+    expect(downloadClick.mock.instances[0].download).toBe(`donations_filtered.${format.toLowerCase()}`);
+    expect(container.querySelector('[role="status"]').textContent).toBe('Export downloaded.');
   });
 
-  test('does not download a partial file when a later page fails', async () => {
-    failPage = 2;
+  test('does not download a file when generation fails', async () => {
+    failure = true;
     await clickExport('CSV');
-    expect(XLSX.writeFile).not.toHaveBeenCalled();
-    expect(container.querySelector('[role="alert"]').textContent).toContain('Failed to fetch donations for export');
+    expect(downloadClick).not.toHaveBeenCalled();
+    expect(container.querySelector('[role="alert"]').textContent).toContain('Export failed.');
     expect(Array.from(container.querySelectorAll('button')).find(b => b.textContent === 'Export CSV').disabled).toBe(false);
   });
 
   test('reports no matches without downloading an empty file', async () => {
     empty = true;
-    await clickExport('XLS');
-    expect(XLSX.writeFile).not.toHaveBeenCalled();
+    await clickExport('XLSX');
+    expect(downloadClick).not.toHaveBeenCalled();
     expect(container.querySelector('[role="alert"]').textContent).toBe('No donations match the current search.');
+  });
+
+  test('cancels the request without downloading', async () => {
+    pending = true;
+    await clickExport('CSV');
+    expect(container.querySelector('[role="status"]').textContent).toBe('Preparing export...');
+    await act(async () => container.querySelector('[aria-label="Cancel export"]').click());
+    expect(exportRequests[0].options.signal.aborted).toBe(true);
+    expect(downloadClick).not.toHaveBeenCalled();
+    expect(container.querySelector('[role="status"]').textContent).toBe('Export cancelled.');
+  });
+
+  test('shows byte download progress and saves only when the stream completes', async () => {
+    let finish;
+    const read = jest.fn()
+      .mockResolvedValueOnce({ done: false, value: new Uint8Array([65, 66]) })
+      .mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    const previousFetch = global.fetch;
+    global.fetch = jest.fn((url, options) => url.includes('/export/') ? Promise.resolve({
+      ok: true,
+      body: { getReader: () => ({ read }) },
+      headers: { get: name => name === 'Content-Length' ? '4' : 'text/csv' },
+    }) : previousFetch(url, options));
+    await clickExport('CSV');
+    expect(container.querySelector('[role="status"]').textContent).toBe('Downloading 50%');
+    expect(downloadClick).not.toHaveBeenCalled();
+    await act(async () => finish({ done: true }));
+    expect(downloadClick).toHaveBeenCalledTimes(1);
+    act(() => jest.runOnlyPendingTimers());
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:export');
+  });
+
+  test('an interrupted download does not save a partial file', async () => {
+    const previousFetch = global.fetch;
+    global.fetch = jest.fn((url, options) => url.includes('/export/') ? Promise.resolve({
+      ok: true,
+      body: { getReader: () => ({ read: jest.fn().mockRejectedValue(new Error('Connection interrupted')) }) },
+      headers: { get: () => null },
+    }) : previousFetch(url, options));
+    await clickExport('CSV');
+    expect(downloadClick).not.toHaveBeenCalled();
+    expect(container.querySelector('[role="alert"]').textContent).toBe('Connection interrupted');
   });
 });

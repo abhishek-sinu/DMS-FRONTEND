@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import DonationForm from './DonationForm';
-import DonationEdit from './DonationEdit';
+import { useEffect, useRef, useState } from 'react';
+import { FiX } from 'react-icons/fi';
 import DashboardLayout from './DashboardLayout';
+import DonationEdit from './DonationEdit';
+import DonationForm from './DonationForm';
 import ImportDonations from './ImportDonations';
 import { downloadDonationReceipt } from './receiptTemplate';
-import * as XLSX from 'xlsx';
 
 function isAuthenticated() {
 	return !!localStorage.getItem('token');
@@ -33,57 +33,64 @@ function DonationList() {
 	const [templeSettings, setTempleSettings] = useState(null);
 	const [exporting, setExporting] = useState('');
 	const [exportError, setExportError] = useState('');
+	const [exportStatus, setExportStatus] = useState('');
+	const exportController = useRef(null);
+
+	useEffect(() => () => exportController.current?.abort(), []);
 
 	const handleExport = async (format) => {
+		if (exportController.current) return;
+		const controller = new AbortController();
+		exportController.current = controller;
 		setExporting(format);
 		setExportError('');
+		setExportStatus('Preparing export...');
 		try {
 			const token = localStorage.getItem('token');
-			const params = new URLSearchParams({ paginated: '1', page: '1', limit: '200' });
+			const params = new URLSearchParams();
 			if (search) params.set('search', search);
-			const allDonations = [];
-			let pages = 1;
-			for (let page = 1; page <= pages; page++) {
-				params.set('page', String(page));
-				const res = await fetch(`${API_URL}/api/donations?${params.toString()}`, {
-					headers: { Authorization: `Bearer ${token}` },
-				});
-				if (!res.ok) throw new Error('Failed to fetch donations for export. Please try again.');
-				const data = await res.json();
-				if (!Array.isArray(data.items) || !Number.isInteger(data.pagination?.totalPages) || data.pagination.totalPages < 0) {
-					throw new Error('Invalid donation export response. Please try again.');
-				}
-				if (page === 1) pages = data.pagination.totalPages;
-				allDonations.push(...data.items);
-			}
-			if (!allDonations.length) throw new Error('No donations match the current search.');
-			if (format === 'xls' && allDonations.length > 65535) {
-				throw new Error('XLS supports up to 65,535 data rows. Use CSV to export all matching donations.');
-			}
-			const text = (value) => {
-				const result = String(value ?? '');
-				// CSV has no cell types, so escape text that spreadsheets could execute.
-				return format === 'csv' && /^[\s]*[=+\-@]|^[\t\r\n]/.test(result) ? `'${result}` : result;
-			};
-			const rows = allDonations.map(d => ({
-				'Receipt Number': text(d.receipt_number),
-				'Phone Number': text(d.phone_number),
-				'Transaction Date': text(formatDate(d.transaction_date)),
-				'Instrument Number': text(d.instrument_number),
-				'Donor Name': text(d.donor_name),
-				'Amount': d.amount == null || d.amount === '' ? '' : Number(d.amount),
-				'Scheme Name': text(d.scheme_name),
-				'Mode Of Payment': text(d.mode_of_payment),
-			}));
-			const sheet = XLSX.utils.json_to_sheet(rows);
-			const workbook = XLSX.utils.book_new();
-			XLSX.utils.book_append_sheet(workbook, sheet, 'Donations');
-			XLSX.writeFile(workbook, `donations${search ? '_filtered' : ''}.${format}`, {
-				bookType: format === 'xls' ? 'biff8' : 'csv',
+			const res = await fetch(`${API_URL}/api/donations/export/${format}?${params.toString()}`, {
+				headers: { Authorization: `Bearer ${token}` },
+				signal: controller.signal,
 			});
+			if (!res.ok) {
+				const data = await res.json().catch(() => ({}));
+				throw new Error(data.error || 'Failed to export donations. Please try again.');
+			}
+			let blob;
+			if (res.body?.getReader) {
+				const reader = res.body.getReader();
+				const chunks = [];
+				let received = 0;
+				const total = Number(res.headers.get('Content-Length'));
+				while (true) {
+					const { done, value } = await reader.read();
+					if (done) break;
+					chunks.push(value);
+					received += value.byteLength;
+					setExportStatus(total > 0
+						? `Downloading ${Math.min(100, Math.round(received / total * 100))}%`
+						: `Downloading ${Math.round(received / 1024)} KB`);
+				}
+				blob = new Blob(chunks, { type: res.headers.get('Content-Type') || 'application/octet-stream' });
+			} else {
+				blob = await res.blob();
+			}
+			if (controller.signal.aborted) return;
+			const url = URL.createObjectURL(blob);
+			const link = document.createElement('a');
+			link.href = url;
+			link.download = `donations${search ? '_filtered' : ''}.${format}`;
+			document.body.appendChild(link);
+			link.click();
+			link.remove();
+			setTimeout(() => URL.revokeObjectURL(url), 1000);
+			setExportStatus('Export downloaded.');
 		} catch (err) {
-			setExportError(err.message || 'Failed to export donations. Please try again.');
+			setExportStatus(controller.signal.aborted ? 'Export cancelled.' : '');
+			if (!controller.signal.aborted) setExportError(err.message || 'Failed to export donations. Please try again.');
 		} finally {
+			exportController.current = null;
 			setExporting('');
 		}
 	};
@@ -238,17 +245,22 @@ function DonationList() {
 				<div className="mb-4 flex items-start justify-between gap-3 flex-wrap">
 					<ImportDonations onImport={fetchDonations} />
 					<div className="flex gap-2 sm:ml-auto">
-						<button type="button" onClick={() => handleExport('xls')} disabled={!!exporting || loading}
+						<button type="button" onClick={() => handleExport('xlsx')} disabled={!!exporting || loading}
 							className="bg-green-600 text-white py-2 px-4 rounded font-semibold hover:bg-green-700 transition disabled:opacity-60">
-							{exporting === 'xls' ? 'Exporting XLS...' : 'Export XLS'}
+							{exporting === 'xlsx' ? 'Exporting XLSX...' : 'Export XLSX'}
 						</button>
 						<button type="button" onClick={() => handleExport('csv')} disabled={!!exporting || loading}
 							className="bg-blue-600 text-white py-2 px-4 rounded font-semibold hover:bg-blue-700 transition disabled:opacity-60">
 							{exporting === 'csv' ? 'Exporting CSV...' : 'Export CSV'}
 						</button>
+						{exporting && <button type="button" onClick={() => exportController.current?.abort()}
+							aria-label="Cancel export" title="Cancel export" className="border rounded p-2 text-gray-700">
+							<FiX size={20} />
+						</button>}
 					</div>
 				</div>
 				{exportError && <div role="alert" className="mb-3 text-red-500">{exportError}</div>}
+				{exportStatus && <div role="status" className="mb-3 text-sm text-gray-600">{exportStatus}</div>}
 				{showAdd && <DonationForm onSuccess={() => { setShowAdd(false); fetchDonations(); }} onCancel={() => setShowAdd(false)} />}
 				{editId && <DonationEdit donationId={editId} onSuccess={() => { setEditId(null); fetchDonations(); }} onCancel={() => setEditId(null)} />}
 				{loading && (
@@ -262,55 +274,55 @@ function DonationList() {
 					</div>
 				)}
 				{!loading && <div className="overflow-x-auto mt-4">
-				<table className="min-w-[1050px] border w-full" style={{ width: '100%' }} aria-label="Donation List Table">
-					<thead>
-						<tr className="bg-gray-100">
-							<th className="py-2 px-4 border" scope="col">Receipt Number</th>
-							<th className="py-2 px-4 border" scope="col">Phone Number</th>
-							<th className="py-2 px-4 border" scope="col">Transaction Date</th>
-							<th className="py-2 px-4 border" scope="col">Instrument Number</th>
-							<th className="py-2 px-4 border" scope="col">Donor Name</th>
-							<th className="py-2 px-4 border" scope="col">Amount</th>
-							<th className="py-2 px-4 border" scope="col">Scheme Name</th>
-							<th className="py-2 px-4 border" scope="col">Mode Of Payment</th>
-							<th className="py-2 px-4 border" scope="col">Actions</th>
-						</tr>
-					</thead>
-					<tbody>
-						{filteredDonations.map((donation, idx) => (
-							<tr key={donation.id} tabIndex={0} aria-label={`Donation row ${(currentPage - 1) * pageSize + idx + 1}`}
-								className="focus:outline-none focus:ring-2 focus:ring-blue-400">
-								<td className="py-2 px-4 border">{donation.receipt_number}</td>
-								<td className="py-2 px-4 border">{donation.phone_number}</td>
-								<td className="py-2 px-4 border">{formatDate(donation.transaction_date)}</td>
-								<td className="py-2 px-4 border">{donation.instrument_number}</td>
-								<td className="py-2 px-4 border">{donation.donor_name}</td>
-								<td className="py-2 px-4 border">{donation.amount}</td>
-								<td className="py-2 px-4 border">{donation.scheme_name}</td>
-								<td className="py-2 px-4 border">{donation.mode_of_payment}</td>
-								<td className="py-2 px-4 border">
-									<div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
-										<button
-											className="bg-blue-600 text-white px-3 py-1 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 hover:bg-blue-700 transition"
-											aria-label={`Edit donation ${donation.id}`}
-											onClick={() => setEditId(donation.id)}
-										>Edit</button>
-										<button
-											className="bg-amber-600 text-white px-3 py-1 rounded focus:outline-none focus:ring-2 focus:ring-amber-400 hover:bg-amber-700 transition"
-											aria-label={`Download receipt for donation ${donation.id}`}
-											onClick={() => handleDownloadReceipt(donation)}
-										>Receipt</button>
-										<button
-											className="bg-red-600 text-white px-3 py-1 rounded focus:outline-none focus:ring-2 focus:ring-red-400 hover:bg-red-700 transition"
-											aria-label={`Delete donation ${donation.id}`}
-											onClick={() => openDeleteModal(donation.id)}
-										>Delete</button>
-									</div>
-								</td>
+					<table className="min-w-[1050px] border w-full" style={{ width: '100%' }} aria-label="Donation List Table">
+						<thead>
+							<tr className="bg-gray-100">
+								<th className="py-2 px-4 border" scope="col">Receipt Number</th>
+								<th className="py-2 px-4 border" scope="col">Phone Number</th>
+								<th className="py-2 px-4 border" scope="col">Transaction Date</th>
+								<th className="py-2 px-4 border" scope="col">Instrument Number</th>
+								<th className="py-2 px-4 border" scope="col">Donor Name</th>
+								<th className="py-2 px-4 border" scope="col">Amount</th>
+								<th className="py-2 px-4 border" scope="col">Scheme Name</th>
+								<th className="py-2 px-4 border" scope="col">Mode Of Payment</th>
+								<th className="py-2 px-4 border" scope="col">Actions</th>
 							</tr>
-						))}
-					</tbody>
-				</table>
+						</thead>
+						<tbody>
+							{filteredDonations.map((donation, idx) => (
+								<tr key={donation.id} tabIndex={0} aria-label={`Donation row ${(currentPage - 1) * pageSize + idx + 1}`}
+									className="focus:outline-none focus:ring-2 focus:ring-blue-400">
+									<td className="py-2 px-4 border">{donation.receipt_number}</td>
+									<td className="py-2 px-4 border">{donation.phone_number}</td>
+									<td className="py-2 px-4 border">{formatDate(donation.transaction_date)}</td>
+									<td className="py-2 px-4 border">{donation.instrument_number}</td>
+									<td className="py-2 px-4 border">{donation.donor_name}</td>
+									<td className="py-2 px-4 border">{donation.amount}</td>
+									<td className="py-2 px-4 border">{donation.scheme_name}</td>
+									<td className="py-2 px-4 border">{donation.mode_of_payment}</td>
+									<td className="py-2 px-4 border">
+										<div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
+											<button
+												className="bg-blue-600 text-white px-3 py-1 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 hover:bg-blue-700 transition"
+												aria-label={`Edit donation ${donation.id}`}
+												onClick={() => setEditId(donation.id)}
+											>Edit</button>
+											<button
+												className="bg-amber-600 text-white px-3 py-1 rounded focus:outline-none focus:ring-2 focus:ring-amber-400 hover:bg-amber-700 transition"
+												aria-label={`Download receipt for donation ${donation.id}`}
+												onClick={() => handleDownloadReceipt(donation)}
+											>Receipt</button>
+											<button
+												className="bg-red-600 text-white px-3 py-1 rounded focus:outline-none focus:ring-2 focus:ring-red-400 hover:bg-red-700 transition"
+												aria-label={`Delete donation ${donation.id}`}
+												onClick={() => openDeleteModal(donation.id)}
+											>Delete</button>
+										</div>
+									</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
 				</div>}
 
 				{/* Pagination Controls */}
@@ -330,20 +342,20 @@ function DonationList() {
 								onClick={() => setCurrentPage(p => p - 1)}
 								className="px-3 py-1 rounded border text-sm font-semibold disabled:opacity-40 hover:bg-blue-50 transition"
 							>Prev</button>
-								{(() => {
-									const totalPagesLocal = totalPages;
-									const windowSize = 10;
-									let start = Math.max(1, currentPage - Math.floor(windowSize / 2));
-									let end = Math.min(totalPagesLocal, start + windowSize - 1);
-									if (end - start + 1 < windowSize) start = Math.max(1, end - windowSize + 1);
-									return Array.from({ length: end - start + 1 }, (_, i) => start + i).map(page => (
-										<button
-											key={page}
-											onClick={() => setCurrentPage(page)}
-											className={`px-3 py-1 rounded border text-sm font-semibold transition ${currentPage === page ? 'bg-blue-600 text-white' : 'hover:bg-blue-50'}`}
-										>{page}</button>
-									));
-								})()}
+							{(() => {
+								const totalPagesLocal = totalPages;
+								const windowSize = 10;
+								let start = Math.max(1, currentPage - Math.floor(windowSize / 2));
+								let end = Math.min(totalPagesLocal, start + windowSize - 1);
+								if (end - start + 1 < windowSize) start = Math.max(1, end - windowSize + 1);
+								return Array.from({ length: end - start + 1 }, (_, i) => start + i).map(page => (
+									<button
+										key={page}
+										onClick={() => setCurrentPage(page)}
+										className={`px-3 py-1 rounded border text-sm font-semibold transition ${currentPage === page ? 'bg-blue-600 text-white' : 'hover:bg-blue-50'}`}
+									>{page}</button>
+								));
+							})()}
 							<button
 								disabled={currentPage === totalPages}
 								onClick={() => setCurrentPage(p => p + 1)}
@@ -358,32 +370,32 @@ function DonationList() {
 					</div>
 				)}
 
-			{/* Delete Confirmation Modal */}
-			{showDeleteModal && (
-				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-					<div className="bg-white rounded-2xl shadow-2xl p-5 sm:p-8 w-full max-w-md mx-4 animate-fadeIn">
-						<h3 className="text-xl font-bold mb-4 text-center text-red-600">Confirm Deletion</h3>
-						<p className="mb-4 text-center">Type <span className="font-mono font-bold text-red-500">delete</span> to confirm deletion of this donation.</p>
-						<input
-							className="border p-2 rounded w-full mb-4 focus:ring-2 focus:ring-red-400"
-							value={deleteInput}
-							onChange={e => setDeleteInput(e.target.value)}
-							placeholder="Type 'delete' here"
-							autoFocus
-						/>
-						<div className="flex justify-center space-x-4">
-							<button
-								className="bg-gray-300 text-gray-800 px-4 py-2 rounded font-semibold hover:bg-gray-400 transition"
-								onClick={closeDeleteModal}
-							>Cancel</button>
-							<button
-								className="bg-red-600 text-white px-4 py-2 rounded font-semibold hover:bg-red-700 transition"
-								onClick={confirmDelete}
-							>Delete</button>
+				{/* Delete Confirmation Modal */}
+				{showDeleteModal && (
+					<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+						<div className="bg-white rounded-2xl shadow-2xl p-5 sm:p-8 w-full max-w-md mx-4 animate-fadeIn">
+							<h3 className="text-xl font-bold mb-4 text-center text-red-600">Confirm Deletion</h3>
+							<p className="mb-4 text-center">Type <span className="font-mono font-bold text-red-500">delete</span> to confirm deletion of this donation.</p>
+							<input
+								className="border p-2 rounded w-full mb-4 focus:ring-2 focus:ring-red-400"
+								value={deleteInput}
+								onChange={e => setDeleteInput(e.target.value)}
+								placeholder="Type 'delete' here"
+								autoFocus
+							/>
+							<div className="flex justify-center space-x-4">
+								<button
+									className="bg-gray-300 text-gray-800 px-4 py-2 rounded font-semibold hover:bg-gray-400 transition"
+									onClick={closeDeleteModal}
+								>Cancel</button>
+								<button
+									className="bg-red-600 text-white px-4 py-2 rounded font-semibold hover:bg-red-700 transition"
+									onClick={confirmDelete}
+								>Delete</button>
+							</div>
 						</div>
 					</div>
-				</div>
-			)}
+				)}
 			</div>
 		</DashboardLayout>
 	);

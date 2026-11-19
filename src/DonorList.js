@@ -11,9 +11,21 @@ function isAuthenticated() {
 	return !!localStorage.getItem('token');
 }
 
+function getCurrentUser() {
+	try {
+		const token = localStorage.getItem('token');
+		return token ? JSON.parse(atob(token.split('.')[1])) : null;
+	} catch {
+		return null;
+	}
+}
+
 function DonorList() {
 	const [deleteConfirmText, setDeleteConfirmText] = useState('');
 	const API_URL = process.env.REACT_APP_API_URL;
+	const currentUser = getCurrentUser();
+	const isCultivator = (currentUser?.role_name || '').toLowerCase() === 'cultivator' || Number(currentUser?.role_id) === 3;
+	const cultivatorId = isCultivator ? currentUser?.cultivator_id : null;
 	const [donors, setDonors] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [initialLoad, setInitialLoad] = useState(true);
@@ -244,9 +256,9 @@ function DonorList() {
 						<span className="text-sm text-gray-500">per page</span>
 					</div>
 				</div>
-				<div className="mb-4">
+				{!isCultivator && <div className="mb-4">
 					<ImportDonors onImport={fetchDonors} />
-				</div>
+				</div>}
 				{/* Birthday & Anniversary Filter Panel */}
 				<div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-4 mb-4">
 					<div className="flex flex-wrap gap-4 items-end">
@@ -299,8 +311,8 @@ function DonorList() {
 						<p className="text-xs text-blue-600 mt-2 font-medium">{totalRecords} donor{totalRecords !== 1 ? 's' : ''} match the current filter</p>
 					)}
 				</div>
-				{showAdd && <DonorForm onSuccess={() => { setShowAdd(false); fetchDonors(); }} />}
-				{editDonor && <DonorEdit donor={editDonor} onSuccess={() => { setEditDonor(null); fetchDonors(); }} onCancel={() => setEditDonor(null)} />}
+				{showAdd && <DonorForm isCultivator={isCultivator} cultivatorId={cultivatorId} onSuccess={() => { setShowAdd(false); fetchDonors(); }} />}
+				{editDonor && <DonorEdit donor={editDonor} isCultivator={isCultivator} onSuccess={() => { setEditDonor(null); fetchDonors(); }} onCancel={() => setEditDonor(null)} />}
 				{loading && (
 					<div className="flex flex-col items-center justify-center py-20 gap-4">
 						<div className="relative w-16 h-16">
@@ -347,11 +359,11 @@ function DonorList() {
 													aria-label={`Edit donor ${donor.name}`}
 													onClick={() => setEditDonor(donor)}
 												>Edit</button>
-												<button
+												{!isCultivator && <button
 													className="bg-red-500 text-white px-4 py-2 rounded-lg shadow-sm font-semibold hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400 transition"
 													aria-label={`Delete donor ${donor.name}`}
 													onClick={() => setDeleteDonorId(donor.id)}
-												>Delete</button>
+												>Delete</button>}
 											</div>
 										</td>
 									</tr>
